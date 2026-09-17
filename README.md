@@ -113,6 +113,54 @@ deja que el navegador lo escale, lo que suaviza todo. Ya esta implementado
 (`property real resolution`), pero **no se pudo confirmar la mejora**: la captura
 de control salio a otro tamaño de ventana y por lo tanto no era comparable.
 
+## Proveedor y maquinaria
+
+Este repo es **solo el proveedor**: los shaders, el atlas, la paleta y el
+marcador. Lo que los monta en algun lado — plugin de Quickshell, daemon de
+wallpaper, instalador de un tema — vive afuera y lee `provider.json`.
+
+La division es deliberada, copiada del tema
+[enter-the-matrix](https://github.com/tymurbogach/omarchy-enter-the-matrix-theme):
+un segundo proveedor (otra lluvia, otro efecto) no deberia obligar a tocar una
+linea de la maquinaria.
+
+```
+omarchy-matrix-rain     <- este repo: el efecto
+  provider.json           declara shaders, atlas, paleta, marcador, defaults
+  shaders/  assets/  qml/
+
+omarchy-matrix-theme    <- consumidor: instala el marcador en su carpeta de
+                           fondos, aporta colores de terminal, backgrounds, etc.
+```
+
+### Hosts posibles
+
+| Host | Multipaso | Que corre |
+|---|---|---|
+| Quickshell (`ShaderEffect`) | si | la cadena completa, con bloom |
+| hyprglaze, shaderbg, neowall, wallrs | no | solo `rain` (sin bloom) |
+| Shadertoy | si (buffers) | la cadena completa |
+
+Por eso los uniforms usan los nombres de Shadertoy (`iTime`, `iResolution`):
+el mismo shader corre en todos, y el que no soporte multipaso usa la etapa
+`rain` sola. Se pierde el bloom, no la lluvia.
+
+### Como se selecciona como fondo en Omarchy
+
+`assets/matrix-rain.live.png` hace tres cosas a la vez:
+
+1. es la **miniatura** en el switcher de fondos,
+2. seleccionarlo es lo que **enciende** la lluvia en vivo — el consumidor mira
+   el nombre del fondo actual y busca el marcador `.live.`,
+3. si nada esta corriendo, es lo que ves: un **fondo estatico** decente.
+
+Va a `~/.config/omarchy/backgrounds/<slug>/`, que Omarchy lista antes que los
+del tema (`omarchy-theme-bg-next` ordena por ruta, y `.config` < `.local`).
+
+El marcador es `.live.` y no `-live-` a proposito: enter-the-matrix usa ese
+otro, y si estan los dos instalados encenderia su lluvia junto con la nuestra.
+
+
 ## Pendiente
 
 - Confirmar el efecto de `resolution: 0.75` con una captura pareada valida.

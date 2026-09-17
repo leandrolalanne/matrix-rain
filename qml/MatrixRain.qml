@@ -110,7 +110,7 @@ Item {
 
     property real iTime: root.elapsed
     property real numColumns: root.numColumns
-    property real numRows: root.numRows
+    property size iResolution: Qt.size(width, height)
     property real fallSpeed: root.fallSpeed
     property real raindropLength: root.raindropLength
     property real baseContrast: root.baseContrast

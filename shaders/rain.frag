@@ -35,7 +35,6 @@ layout(std140, binding = 0) uniform buf {
 
     float iTime;
     float numColumns;
-    float numRows;
     float fallSpeed;
     float raindropLength;
     float baseContrast;
@@ -44,6 +43,10 @@ layout(std140, binding = 0) uniform buf {
     float glyphSequenceLength;
     float msdfPxRange;
 
+    // Nombres de Shadertoy (iTime arriba, iResolution aca): son los que pasan
+    // hyprglaze, shaderbg, neowall y wallrs, asi que el mismo shader corre en
+    // esos daemons de wallpaper y en Shadertoy, no solo en Quickshell.
+    vec2 iResolution;
     vec2 glyphTextureGridSize;
     vec2 glyphMSDFSize;
 };
@@ -119,6 +122,10 @@ void main() {
     // que lo tiene abajo. Sin este flip la lluvia sube.
     vec2 uv = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y);
 
+    // Las CELDAS son cuadradas, no la grilla: numColumns va a lo ANCHO y las
+    // filas caen con el mismo paso. Se deriva aca en vez de recibirlo, asi un
+    // host que solo pasa iResolution no tiene que calcular nada.
+    float numRows = max(1.0, numColumns * iResolution.y / iResolution.x);
     vec2 grid = vec2(numColumns, numRows);
     vec2 glyphPos = floor(uv * grid);
     vec2 screenPos = glyphPos / grid;

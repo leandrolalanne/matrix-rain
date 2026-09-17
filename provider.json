@@ -1,0 +1,108 @@
+{
+  "//": [
+    "El proveedor. Declara QUE ofrece este repo; los adaptadores leen de aca en",
+    "vez de hardcodear rutas, nombres y constantes.",
+    "",
+    "La division es a proposito, copiada del tema enter-the-matrix: por un lado",
+    "el PROVEEDOR (shaders, atlas, paleta, marcador) y por otro la MAQUINARIA",
+    "que lo monta en algun lado (plugin de Quickshell, daemon de wallpaper,",
+    "instalador de un tema). Un segundo proveedor -- otra lluvia, otro efecto --",
+    "no deberia obligar a tocar una linea de la maquinaria.",
+    "",
+    "Este repo es solo el proveedor. Los consumidores viven afuera."
+  ],
+
+  "id": "matrix-rain",
+  "displayName": "Matrix Rain",
+  "version": "0.1.0",
+  "license": "MIT",
+
+  "upstream": {
+    "//": "De donde sale el algoritmo. Ver LICENSE.rezmason y README.",
+    "name": "Rezmason/matrix",
+    "url": "https://github.com/Rezmason/matrix",
+    "version": "classic",
+    "commit": "5ba90490453ceceb6812d6b1bc658a99a92411d0",
+    "license": "MIT"
+  },
+
+  "render": {
+    "//chain": [
+      "La cadena completa, en orden. Cada etapa es un fragment shader.",
+      "Un host que NO soporte multipaso (hyprglaze y la mayoria de los daemons",
+      "de wallpaper son de un solo paso) puede correr solo `rain`: se pierde el",
+      "bloom, no la lluvia."
+    ],
+    "chain": ["rain", "highpass", "blur", "combine", "palette"],
+    "singlePass": "rain",
+    "shaders": {
+      "rain":     "shaders/rain.frag",
+      "highpass": "shaders/highpass.frag",
+      "blur":     "shaders/blur.frag",
+      "combine":  "shaders/combine.frag",
+      "palette":  "shaders/palette.frag"
+    },
+    "//compiled": "Los .qsb los genera tools/build-shaders.sh; solo los usa Qt.",
+    "compiledSuffix": ".qsb",
+    "//uniforms": "Nombres de Shadertoy, los que pasan hyprglaze, shaderbg, neowall y wallrs.",
+    "standardUniforms": ["iTime", "iResolution"],
+    "bloomLevels": 5
+  },
+
+  "assets": {
+    "//": "El atlas es el de upstream, sin tocar: MSDF de los glifos de la trilogia.",
+    "glyphAtlas": "assets/matrixcode_msdf.png",
+    "glyphSequenceLength": 57,
+    "glyphTextureGridSize": [8, 8],
+    "glyphMSDFSize": [512, 512],
+    "msdfPxRange": 4.0
+  },
+
+  "background": {
+    "//": [
+      "Como se ofrece como fondo seleccionable en Omarchy.",
+      "El PNG cumple tres funciones: miniatura en el switcher, marcador que",
+      "enciende la lluvia en vivo, y fallback estatico si el plugin no corre.",
+      "Va a ~/.config/omarchy/backgrounds/<slug>/, que Omarchy lista ANTES que",
+      "los del tema (omarchy-theme-bg-next ordena por ruta y .config < .local).",
+      "El marcador es '.live.' y no '-live-' para no chocar con enter-the-matrix,",
+      "que usa ese otro y encenderia su lluvia junto con la nuestra."
+    ],
+    "marker": ".live.",
+    "image": "assets/matrix-rain.live.png",
+    "generator": "tools/make-marker.sh"
+  },
+
+  "defaults": {
+    "//": [
+      "Los de la version 'classic' de upstream (js/config.js).",
+      "Fuente de verdad: qml/MatrixRain.qml los refleja; si cambia uno, cambian los dos."
+    ],
+    "numColumns": 80,
+    "fallSpeed": 0.3,
+    "raindropLength": 0.75,
+    "baseContrast": 1.1,
+    "baseBrightness": -0.5,
+    "cyclesPerSecond": 1.8,
+    "resolution": 0.75,
+    "bloomSize": 0.4,
+    "bloomStrength": 0.7,
+    "highPassThreshold": 0.1,
+    "cursorIntensity": 2.0,
+    "ditherMagnitude": 0.05,
+    "fps": 30
+  },
+
+  "palette": {
+    "//": "hsl(0.3, 0.9, l) de 'classic', ya convertido a RGB. El cuarto valor es la posicion del stop.",
+    "stops": [
+      [0.000, 0.000, 0.000, 0.0],
+      [0.092, 0.380, 0.020, 0.2],
+      [0.538, 0.970, 0.430, 0.7],
+      [0.692, 0.980, 0.620, 0.8]
+    ],
+    "cursor": [0.7559, 1.0, 0.46],
+    "glint":  [1.0, 1.0, 1.0],
+    "background": [0.0, 0.0, 0.0]
+  }
+}
