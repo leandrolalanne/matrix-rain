@@ -94,24 +94,51 @@ el cruce el offset da exactamente un texel. Aca se pasa el texel directo.
 
 ## Fidelidad
 
-Medido contra el original a igual tamaño de ventana (ver `tools/COMPARACION.md`):
+Medido contra el original a igual tamaño (1600x900), **ambos offscreen**: el
+port con `Item.grabToImage()` y Rezmason con `chromium --headless=new
+--screenshot`. Ni ventanas ni gestor de ventanas de por medio, asi que es
+reproducible. Ver `tools/COMPARACION.md`.
 
-| | resultado |
-|---|---|
-| Balance de color (`R/G`, `B/G`) | **+0.4%** |
-| Brillo de picos (`p99`) | **+0.8%** |
-| Paso de grilla | 23 vs 24 px |
-| Brillo medio | **-28%** |
+| metrica | original | port | delta |
+|---|---|---|---|
+| balance de color R/G | 0.3825 | 0.3843 | **+0.5%** |
+| balance de color B/G | 0.2422 | 0.2404 | **-0.7%** |
+| brillo de picos (p99) | 0.9333 | 0.9569 | +2.5% |
+| brillo medio | 0.1213 | 0.1126 | **-7.2%** |
+| fraccion casi negra | 0.5634 | 0.6082 | +8.0% |
+| paso de grilla | 20 px / 45 filas | 20 px / 45 filas | igual |
 
-Color, picos y geometria coinciden. Falta resplandor en los medios tonos.
+Color y geometria practicamente clavados. Queda ~7% menos de brillo medio y un
+8% mas de negro puro: al original le sobra un resplandor tenue repartido que al
+port le falta. Con una varianza entre cuadros de ~5%, eso esta apenas por
+encima del ruido.
 
-Una bisección con el bloom apagado en ambos mostro que la diferencia **ya estaba
-en el paso de lluvia** (-17.6%), no en el bloom, y con una firma clara: picos mas
-altos y mas negro puro, o sea glifos mas filosos que el original. La causa es
-`resolution: 0.75` en los defaults de upstream — renderiza el canvas al 75% y
-deja que el navegador lo escale, lo que suaviza todo. Ya esta implementado
-(`property real resolution`), pero **no se pudo confirmar la mejora**: la captura
-de control salio a otro tamaño de ventana y por lo tanto no era comparable.
+### Lo que NO era
+
+Durante un tiempo la brecha parecia del -28%, y se atribuyo a que upstream trae
+`resolution: 0.75` en sus defaults — renderiza el canvas al 75% y deja que el
+navegador lo escale, suavizando los glifos.
+
+**Medido, esa hipotesis es falsa.** Aplicar 0.75 empeora todo:
+
+| | media | color R/G | color B/G |
+|---|---|---|---|
+| `resolution 1.00` | -7.2% | +0.5% | -0.7% |
+| `resolution 0.75` | -15.3% | -6.2% | -13.4% |
+
+El razonamiento estaba bien; lo que estaba mal es DONDE cae el escalado.
+Upstream corre la cadena entera a esa fraccion y el navegador escala la imagen
+FINAL (`canvas.width = clientWidth * dpr * resolution`, con el canvas estirado
+por CSS). Aca solo baja la textura de lluvia y la paleta sigue a resolucion
+completa, asi que el escalado cae ANTES del mapeo de color en vez de despues:
+en vez de suavizar el color final, pierde cobertura de glifo antes de la rampa.
+
+Por eso `resolution` quedo en `1.0` y es una palanca de rendimiento, no de
+fidelidad. Para que 0.75 fuera fiel habria que envolver la cadena completa
+(palette incluida) en un `ShaderEffectSource` y escalar recien la salida.
+
+Buena parte del -28% original tampoco era real: venia de comparar capturas de
+ventana de tamaños distintos, antes de tener medicion determinista.
 
 ## Proveedor y maquinaria
 

@@ -84,7 +84,7 @@
     "baseContrast": 1.1,
     "baseBrightness": -0.5,
     "cyclesPerSecond": 1.8,
-    "resolution": 0.75,
+    "resolution": 1.0,
     "bloomSize": 0.4,
     "bloomStrength": 0.7,
     "highPassThreshold": 0.1,

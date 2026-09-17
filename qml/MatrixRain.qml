@@ -39,11 +39,24 @@ Item {
   // tomando 60fps como referencia: 0.03 * 60 = 1.8 cambios por segundo.
   property real cyclesPerSecond: 1.8
 
-  // Upstream renderiza el canvas a esta fraccion del tamaño de la ventana y
-  // deja que el navegador lo escale (`resolution: 0.75` en sus defaults). No es
-  // solo rendimiento: suaviza los glifos, y sin esto el port sale mas filoso
-  // que el original (picos mas altos, mas negro puro, menos medios tonos).
-  property real resolution: 0.75
+  // Fraccion del tamaño a la que se renderiza la lluvia. Upstream usa 0.75,
+  // pero OJO: alla la cadena ENTERA corre a esa fraccion y el navegador escala
+  // la imagen FINAL (canvas.width = clientWidth * dpr * resolution, con el
+  // canvas estirado por CSS). Aca solo baja la textura de lluvia y la paleta
+  // sigue a resolucion completa, asi que el escalado cae ANTES del mapeo de
+  // color en vez de despues.
+  //
+  // Medido contra el original a igual tamaño (1600x900, ambos offscreen):
+  //
+  //             media    color R/G   color B/G
+  //   res 1.00  -7.2%      +0.5%       -0.7%
+  //   res 0.75  -15.3%     -6.2%      -13.4%
+  //
+  // O sea que 0.75 con esta implementacion empeora todo, incluido el balance de
+  // color que a 1.00 esta practicamente clavado. Queda como palanca de
+  // rendimiento, no de fidelidad. Para que 0.75 sea fiel habria que envolver la
+  // cadena completa (palette incluida) y escalar recien la salida.
+  property real resolution: 1.0
 
   // --- bloom ---
   property real bloomSize: 0.4          // la piramide arranca a esta fraccion de la pantalla

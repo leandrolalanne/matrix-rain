@@ -34,9 +34,29 @@ antes de comparar.
 **3. Olvidar que el campo esta animado.** Entre cuadros de una misma corrida las
 metricas se mueven ~5%. Cualquier diferencia menor a eso es ruido.
 
-## Lo que deberia hacerse
+## El metodo que funciona
 
-Sacar al gestor de ventanas del medio y renderizar offscreen a un tamaño fijo:
-Chromium con `--headless=new --screenshot --window-size=W,H` (sin
-`--disable-gpu`, que mata el WebGL) y el QML con una plataforma offscreen. Es
-determinista y no depende de que workspace este libre. No esta hecho.
+Sacar al gestor de ventanas del medio. Las dos puntas se capturan offscreen y
+el resultado es reproducible:
+
+```bash
+# el port
+qml6 dev/grab.qml -- salida.png 1280 720 8 1.0     # ancho alto settle resolution
+
+# el original
+chromium --headless=new --window-size=1600,900 --virtual-time-budget=10000 \
+  --screenshot=orig.png "http://127.0.0.1:<puerto>/?version=classic"
+```
+
+Dos advertencias:
+
+**El tamaño que pide el QML no es el que sale.** `grabToImage` multiplica por el
+devicePixelRatio de la pantalla, y ni `QT_SCALE_FACTOR`, ni
+`QT_ENABLE_HIGHDPI_SCALING=0`, ni `QT_SCREEN_SCALE_FACTORS=1` lo evitan (probados
+los tres). Con dpr 1.25, pedir 1280x720 da 1600x900. No es problema: alcanza con
+pedirle a Chromium el tamaño que efectivamente salio, porque `numColumns` se
+reparte sobre el ancho en los dos y el canvas interno queda igual.
+
+**Chromium headless cae a WebGL por software** (SwiftShader). El resultado se ve
+correcto y la matematica del shader es la misma, pero conviene tenerlo presente
+como posible fuente de diferencias chicas.
