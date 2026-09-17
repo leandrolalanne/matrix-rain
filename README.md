@@ -8,10 +8,13 @@ costo de un navegador.
 medios tonos, identificada pero sin confirmar (ver Fidelidad).**
 
 ```bash
-tools/build-shaders.sh      # compila shaders/*.frag a .qsb
-qml6 dev/main.qml           # ventana de prueba
-qml6 dev/fullscreen.qml     # pantalla completa, para comparar
+tools/build-shaders.sh      # compila shaders/*.frag a .qsb (solo si tocas un .frag)
+tools/preview.sh            # vista previa en una ventana
+tools/preview.sh --ambos    # el port y el original de Rezmason, lado a lado
+qml6 dev/main.qml           # equivalente a preview.sh, directo
 ```
+
+Super+F pone en pantalla completa la ventana enfocada.
 
 ## Por que existe
 
