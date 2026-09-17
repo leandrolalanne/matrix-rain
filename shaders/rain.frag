@@ -1,5 +1,8 @@
 #version 440
 
+// Paso 1 de 4: la lluvia. Emite brillo crudo por canal; el color se aplica
+// al final de la cadena (rain -> highpass/blur piramide -> combine -> palette).
+//
 // Lluvia Matrix, port nativo del `classic` de Rezmason/matrix (MIT).
 //
 // El original corre cuatro ping-pong buffers en half float (intro, raindrop,
@@ -40,19 +43,9 @@ layout(std140, binding = 0) uniform buf {
     float cyclesPerSecond;
     float glyphSequenceLength;
     float msdfPxRange;
-    float cursorIntensity;
-    float ditherMagnitude;
 
     vec2 glyphTextureGridSize;
     vec2 glyphMSDFSize;
-
-    vec4 colBg;
-    vec4 colCursor;
-    // rgb = color del stop, a = posicion del stop en la rampa de brillo
-    vec4 pal0;
-    vec4 pal1;
-    vec4 pal2;
-    vec4 pal3;
 };
 
 layout(binding = 1) uniform sampler2D glyphMSDF;
@@ -112,19 +105,6 @@ float getSymbolIndex(float simTime, vec2 screenPos) {
     return floor(glyphSequenceLength * randomFloat(screenPos + tk));
 }
 
-// Rampa de brillo -> color. El original arma una textura 1D de 2048 muestras
-// interpolando LINEALMENTE entre stops, y con los extremos sostenidos mas alla
-// del primer y ultimo stop. Con smoothstep en vez de mix lineal los verdes
-// intermedios salen corridos.
-vec3 samplePalette(float t) {
-    t = clamp(t, 0.0, 1.0);
-    if (t <= pal0.a) return pal0.rgb;
-    if (t <= pal1.a) return mix(pal0.rgb, pal1.rgb, (t - pal0.a) / max(1e-5, pal1.a - pal0.a));
-    if (t <= pal2.a) return mix(pal1.rgb, pal2.rgb, (t - pal1.a) / max(1e-5, pal2.a - pal1.a));
-    if (t <= pal3.a) return mix(pal2.rgb, pal3.rgb, (t - pal2.a) / max(1e-5, pal3.a - pal2.a));
-    return pal3.rgb;
-}
-
 // Posicion del glifo dentro del atlas. La fila se cuenta desde abajo, como en
 // el original (symbolY = gridSize.y - symbolY - 1).
 vec2 getSymbolUV(float index) {
@@ -163,17 +143,12 @@ void main() {
     float signedDistance = median3(texture(glyphMSDF, atlasUV).rgb);
     float glyph = clamp(screenPxRange * (signedDistance - 0.5) + 0.5, 0.0, 1.0);
 
-    // --- color ---
-    // El original separa canales: .r va a la rampa, .g al color del cursor.
-    float lit = (isCursor ? 0.0 : base) * glyph;
-    float cursorLit = (isCursor ? base : 0.0) * glyph;
-
-    // Dither para tapar el banding de la rampa, como en palettePass.
-    float dither = randomFloat(gl_FragCoord.xy + fract(simTime)) * ditherMagnitude / 3.0;
-
-    vec3 color = samplePalette(lit - dither)
-               + min(colCursor.rgb * cursorIntensity * cursorLit, vec3(1.0))
-               + colBg.rgb;
-
-    fragColor = vec4(color, 1.0) * qt_Opacity;
+    // --- salida cruda ---
+    // Mismos canales que el rainPass del original:
+    //   r = brillo base del glifo,  g = brillo del cursor,  b = glint (0 en classic)
+    // La paleta se aplica despues, en palette.frag, DESPUES de sumarle el bloom.
+    fragColor = vec4((isCursor ? 0.0 : base) * glyph,
+                     (isCursor ? base : 0.0) * glyph,
+                     0.0,
+                     1.0);
 }

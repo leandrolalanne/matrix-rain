@@ -2,3 +2,4 @@
 *.tmp
 __pycache__/
 *.py[cod]
+dev/_tune.qml

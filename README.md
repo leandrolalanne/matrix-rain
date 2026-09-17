@@ -4,7 +4,8 @@ Port nativo de la lluvia digital de [Rezmason/matrix](https://github.com/Rezmaso
 a un shader de Qt Quick, para usarla como fondo de escritorio sin pagar el
 costo de un navegador.
 
-**Estado: el paso de lluvia funciona y coincide con el original. Falta el bloom.**
+**Estado: lluvia y bloom funcionando. Queda una diferencia de brillo en los
+medios tonos, identificada pero sin confirmar (ver Fidelidad).**
 
 ```bash
 tools/build-shaders.sh      # compila shaders/*.frag a .qsb
@@ -72,13 +73,46 @@ cinco stops contra la conversion propia: coinciden exacto. No hay correccion
 de gamma en ningun lado, y la rampa interpola **lineal** (no smoothstep) con
 los extremos sostenidos.
 
+## La cadena
+
+```
+rain -> piramide de 5 niveles (high-pass -> blur H -> blur V) -> combine -> palette
+```
+
+El bloom no se compone encima del color: se SUMA al brillo antes de mirar la
+rampa (`brightness = primary + bloom`), asi que un glifo brillante no solo gana
+halo sino que trepa en la paleta.
+
+Cada nivel de la piramide hace high-pass de la salida del high-pass del nivel
+anterior, y el downsample lo hace el `ShaderEffectSource` al renderizar a una
+textura mas chica. Un detalle de upstream que confunde: en `bloomPass.js` pasan
+`height: viewportWidth` y `width: viewportHeight`, cruzados. No es un bug — con
+el cruce el offset da exactamente un texel. Aca se pasa el texel directo.
+
+## Fidelidad
+
+Medido contra el original a igual tamaño de ventana (ver `tools/COMPARACION.md`):
+
+| | resultado |
+|---|---|
+| Balance de color (`R/G`, `B/G`) | **+0.4%** |
+| Brillo de picos (`p99`) | **+0.8%** |
+| Paso de grilla | 23 vs 24 px |
+| Brillo medio | **-28%** |
+
+Color, picos y geometria coinciden. Falta resplandor en los medios tonos.
+
+Una bisección con el bloom apagado en ambos mostro que la diferencia **ya estaba
+en el paso de lluvia** (-17.6%), no en el bloom, y con una firma clara: picos mas
+altos y mas negro puro, o sea glifos mas filosos que el original. La causa es
+`resolution: 0.75` en los defaults de upstream — renderiza el canvas al 75% y
+deja que el navegador lo escale, lo que suaviza todo. Ya esta implementado
+(`property real resolution`), pero **no se pudo confirmar la mejora**: la captura
+de control salio a otro tamaño de ventana y por lo tanto no era comparable.
+
 ## Pendiente
 
-- **Bloom.** Es la diferencia visual que queda: el original suma un high-pass
-  desenfocado ANTES de la rampa (`brightness = primary + bloom`), asi que sin
-  el todo cae mas abajo en la paleta y se ve mas apagado y sin halo. Son 5
-  niveles de piramide x (high-pass + blur H + blur V) + combine, encadenados
-  con `ShaderEffectSource`. Mecanico pero verboso.
+- Confirmar el efecto de `resolution: 0.75` con una captura pareada valida.
 - Empaquetarlo como plugin de Quickshell sobre una superficie layer-shell.
 - Los otros presets. `operator` tiene `rippleTypeName: "box"` y por lo tanto SI
   usa el buffer de efectos; no se verifico si los ripples son derivables.
