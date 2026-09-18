@@ -6,7 +6,10 @@
 #   matrix list            what is available
 #
 # While it runs: v next version, i replay the intro, f fps, h hint, q quit.
-# For the rain in the terminal you typed in, see redpill.
+#
+# It detaches, so the terminal you typed in goes back to its prompt and can be
+# closed without taking the rain with it. MATRIX_FOREGROUND=1 keeps it attached.
+# For the rain inside the terminal instead, see redpill.
 
 set -uo pipefail
 
@@ -45,8 +48,19 @@ if [[ -n $VERSION ]] && ! versions | grep -qx "$VERSION"; then
   echo "matrix: no version called '$VERSION'. Try: matrix list" >&2; exit 1
 fi
 
-if [[ -n $VERSION ]]; then
-  exec qml6 "$ROOT/qml/Main.qml" -- "version=$VERSION"
-else
-  exec qml6 "$ROOT/qml/Main.qml"
+ARGS=("$ROOT/qml/Main.qml")
+[[ -n $VERSION ]] && ARGS+=(-- "version=$VERSION")
+
+# Everything that can be checked has been checked by now, so the shell can have
+# its prompt back: a window is not a foreground job. Detaching also means the
+# terminal you typed in is free to be closed, moved or reused without taking the
+# rain down with it, which is the whole reason it is here.
+#
+# Only when this is an interactive terminal. Piped or scripted, staying in the
+# foreground is what a caller expects, and MATRIX_FOREGROUND forces that too.
+if [[ -t 1 && -z ${MATRIX_FOREGROUND:-} ]] && command -v setsid >/dev/null; then
+  setsid -f qml6 "${ARGS[@]}" >/dev/null 2>&1
+  exit 0
 fi
+
+exec qml6 "${ARGS[@]}"

@@ -30,4 +30,12 @@ if [[ -n ${dropped_font:-} ]]; then
   echo "      config, remove it by hand; the font it names is gone now."
 fi
 
+APPS="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+ICONS="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/256x256/apps"
+for f in "$APPS/matrix-rain.desktop" "$ICONS/matrix-rain.png"; do
+  [[ -e $f ]] || continue
+  rm -f "$f"; echo "removed $f"; removed=1
+done
+command -v update-desktop-database >/dev/null && update-desktop-database "$APPS" >/dev/null 2>&1
+
 (( removed )) || echo "nothing to remove"

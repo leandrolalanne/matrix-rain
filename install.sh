@@ -86,6 +86,30 @@ if (( installed_font )); then
   echo "  Without it, 'redpill' opens a window of its own."
 fi
 
+# A desktop entry, so it can be started from an application launcher with no
+# terminal in the picture at all. Exec is absolute because a launcher does not
+# necessarily inherit the PATH a login shell builds.
+APPS="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+ICONS="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/256x256/apps"
+if [[ -f $SRC/assets/matrix-rain.png ]]; then
+  mkdir -p "$APPS" "$ICONS"
+  cp "$SRC/assets/matrix-rain.png" "$ICONS/matrix-rain.png"
+  cat > "$APPS/matrix-rain.desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Matrix Rain
+GenericName=Digital rain
+Comment=The digital rain from The Matrix
+Exec=$BIN/matrix
+Icon=matrix-rain
+Terminal=false
+Categories=Graphics;Amusement;
+Keywords=matrix;rain;screensaver;
+DESKTOP
+  command -v update-desktop-database >/dev/null && update-desktop-database "$APPS" >/dev/null 2>&1
+  echo "installed  $APPS/matrix-rain.desktop"
+fi
+
 # --- check it is reachable ---
 if ! printf '%s' ":$PATH:" | grep -q ":$BIN:"; then
   echo

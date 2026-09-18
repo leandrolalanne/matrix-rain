@@ -488,3 +488,25 @@ overlay. Resize the window to watch it reflow. Super+F fullscreens.
   `Background`, and freezing the render when a window covers the desktop on
   battery — which matters more here, at 18 passes per frame.
 - Measure the actual GPU cost, which is still unmeasured.
+
+## Hiding the window that launched it
+
+`matrix` detaches, so the terminal is free the moment the window is up. On
+Hyprland you can go further and park that terminal out of sight without closing
+it, since **the rain no longer depends on it**:
+
+```bash
+hyprctl eval 'return hl.dispatch(hl.dsp.window.move{ workspace = "special:hidden" })'
+```
+
+That is worth two notes. This Hyprland (0.56.2, Lua config) does not take the
+old `hyprctl dispatch movetoworkspacesilent special:hidden` form: dispatchers are
+Lua builders under `hl.dsp.*`, and the plain form fails with a parser error that
+reads like the dispatcher does not exist.
+
+Second, it acts on the **focused** window. The builder rejects a `window` key, so
+there is no way to name a target, which is why the launcher does not do this for
+you: it would be moving the user's windows on a guess about what has focus. The
+window this app opens reports class `org.qt-project.qml`, which is every qml6
+application, and title `Enter the Matrix`, which is only this one -- so a
+window rule should match on the title.

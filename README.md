@@ -83,6 +83,12 @@ matrix list            # what is available
 It opens as a normal window where you are, not as a fullscreen takeover.
 Super+F fullscreens it if you want that.
 
+**It detaches from the terminal.** The prompt comes straight back, and the
+terminal can be closed, moved or reused without taking the rain with it. It is
+also in your application launcher as *Matrix Rain*, which starts it with no
+terminal in the picture at all. `MATRIX_FOREGROUND=1` keeps it attached, which
+is what a script would want.
+
 The intro plays **once, on launch**. While it runs: `v` next version, `i` replay
 the intro, `f` fps, `h` hint, `q` quit. Switching shows the version's name for a
 couple of seconds and lets it fade.
