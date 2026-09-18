@@ -29,12 +29,29 @@ from pathlib import Path
 
 SQRT_2, SQRT_5 = math.sqrt(2), math.sqrt(5)
 
-# Same palette stops as the shader's `classic`, as (r,g,b,at).
-PALETTE = [(0.000, 0.000, 0.000, 0.0),
-           (0.092, 0.380, 0.020, 0.2),
-           (0.538, 0.970, 0.430, 0.7),
-           (0.692, 0.980, 0.620, 0.8)]
-CURSOR = (0.7559, 1.0, 0.46)
+# Ramps, as (r, g, b, position).
+#
+# `classic` is the shader's, which reproduces upstream's `classic` faithfully
+# (measured at +0.5% on colour balance). Its blue channel sits below its red at
+# every stop, which is what reads as olive on a terminal's coarser cells.
+#
+# `cold` is the default here: hue climbs 146 -> 180 as brightness rises and blue
+# stays above red throughout, so it runs green into a cool bluish white and can
+# never go olive.
+PALETTES = {
+    "cold": [(0.00, 0.00, 0.00, 0.00),
+             (0.02, 0.30, 0.14, 0.22),
+             (0.10, 0.80, 0.45, 0.55),
+             (0.55, 1.00, 0.85, 0.85)],
+    "classic": [(0.000, 0.000, 0.000, 0.0),
+                (0.092, 0.380, 0.020, 0.2),
+                (0.538, 0.970, 0.430, 0.7),
+                (0.692, 0.980, 0.620, 0.8)],
+}
+CURSORS = {"cold": (0.85, 1.0, 1.0), "classic": (0.7559, 1.0, 0.46)}
+
+PALETTE = PALETTES["cold"]
+CURSOR = CURSORS["cold"]
 
 FALLBACK = "\"*+012345789:<>z|¦©ｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾖﾗﾘﾜｰ"
 
@@ -123,6 +140,12 @@ def rand_float(x, y):
 
 def wobble(x):
     return x + 0.3*math.sin(SQRT_2*x) + 0.2*math.sin(SQRT_5*x)
+
+
+def use_palette(name):
+    global PALETTE, CURSOR
+    PALETTE = PALETTES.get(name, PALETTES["cold"])
+    CURSOR = CURSORS.get(name, CURSORS["cold"])
 
 
 def palette(t):
@@ -234,8 +257,9 @@ def run(rain, fps=20):
 USAGE = """the rain, in the terminal
 
   enterthematrix --tty            halfwidth katakana, one cell, any font
-  enterthematrix --tty --font     the codepoints Matrix-Code.ttf maps, two
-                                  cells wide; set that font in your terminal
+  enterthematrix --tty --font     the codepoints Matrix-Code.ttf maps, in a
+                                  terminal opened with that font
+  enterthematrix --tty --classic  upstream's palette instead of the cool one
 
   MATRIX_FPS=30 to change the frame rate. Any key quits.
 """
@@ -246,6 +270,7 @@ def main():
     if "-h" in args or "--help" in args:
         print(USAGE); return
     use_font = "--font" in args
+    use_palette("classic" if "--classic" in args else "cold")
     if not sys.stdout.isatty():
         sys.exit("enterthematrix-tty: needs a terminal")
     fd = sys.stdin.fileno()

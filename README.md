@@ -54,8 +54,9 @@ dependency.
 ## In the terminal
 
 ```bash
-enterthematrix --tty          # halfwidth katakana, one cell, any font
-enterthematrix --tty --font   # the codepoints Matrix-Code.ttf maps
+enterthematrix --tty            # halfwidth katakana, one cell, any font
+enterthematrix --tty --font     # the codepoints Matrix-Code.ttf maps
+enterthematrix --tty --classic  # upstream's palette instead of the cool one
 ```
 
 Pure stdlib Python, no window. **The same field as the shader**:
@@ -112,6 +113,18 @@ scaled.
 
 It is denser than `cmatrix` and friends, because it is the shader's brightness
 curve rather than a sparse random one.
+
+### A different ramp
+
+The shader reproduces upstream's `classic` palette faithfully, and its blue
+channel sits below its red at every stop. On a screen that is the film's green;
+on a terminal's coarser cells it reads olive.
+
+So the terminal defaults to a cooler ramp: hue climbs 146 to 180 as brightness
+rises and blue stays above red throughout, so it runs green into a bluish white
+and never goes olive. Measured over lit cells, blue/red goes from 0.64 to 2.56.
+
+`--classic` gives you upstream's, unchanged.
 
 
 ## Developing
