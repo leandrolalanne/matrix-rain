@@ -17,12 +17,17 @@ cd omarchy-matrix-rain
 Then, from any shell:
 
 ```bash
-enter-the-matrix                 # the default version
-enter-the-matrix operator        # a specific one
-enter-the-matrix --list          # what is available
+enterthematrix                 # classic, arriving from a blank screen
+enterthematrix operator        # start on a specific version
+enterthematrix --list          # what is available
 ```
 
-While it runs: `v` next version, `i` replay the intro, `f` fps, `h` hint, `q` quit.
+It opens as a normal window where you are, not as a fullscreen takeover. Super+F
+fullscreens it if you want that.
+
+The intro plays **once, on launch**, into `classic`. While it runs: `v` next
+version (no intro — switching is not a fresh entry), `i` replay the intro, `f`
+fps, `h` hint, `q` quit.
 
 It needs **qt6-declarative** (for `qml6`) and a GPU that does OpenGL. Nothing else.
 
@@ -34,8 +39,9 @@ undoes either, and never follows the link when removing.
 This works outside Omarchy: it is a plain Qt Quick application with no Omarchy
 dependency.
 
-> The command is named after the film's line. There is also an Omarchy theme
-> called [Enter the Matrix](https://github.com/tymurbogach/omarchy-enter-the-matrix-theme),
+> The command is named after the film's line, run together because a shell
+> command cannot have spaces. There is also an Omarchy theme
+> called [Enter the Matrix](https://github.com/tymurbogach/omarchy-enterthematrix-theme),
 > unrelated to this project, whose own command is `omarchy-matrix`. This one
 > credits that theme below for a finding it published first.
 
@@ -234,7 +240,7 @@ terminal running that font would use.
 
 Two alternatives look reasonable and are not:
 
-- **0.47**, which enter-the-matrix uses, is correct for *its* atlas of halfwidth
+- **0.47**, which enterthematrix uses, is correct for *its* atlas of halfwidth
   katakana taken from `ttfx`. Applied to this atlas it squashes glyphs by half.
 - **Your terminal's metrics** (JetBrainsMono and friends, ~0.6) describe the
   terminal's font, not the film's.
@@ -315,7 +321,7 @@ mounts them somewhere — a Quickshell plugin, a wallpaper daemon, a theme
 installer — lives outside and reads `provider.json`.
 
 The split is deliberate, borrowed from the
-[enter-the-matrix](https://github.com/tymurbogach/omarchy-enter-the-matrix-theme)
+[enterthematrix](https://github.com/tymurbogach/omarchy-enterthematrix-theme)
 theme: a second provider (another rain, another effect) should not force a single
 line of the machinery to change.
 
@@ -352,7 +358,7 @@ You lose the bloom, not the rain.
 It goes in `~/.config/omarchy/backgrounds/<slug>/`, which Omarchy lists before
 the theme's own (`omarchy-theme-bg-next` sorts by path, and `.config` < `.local`).
 
-The marker is `.live.` rather than `-live-` on purpose: enter-the-matrix watches
+The marker is `.live.` rather than `-live-` on purpose: enterthematrix watches
 for that other one, and with both installed it would turn its rain on alongside
 ours.
 
@@ -364,7 +370,7 @@ ours.
 resolution drops to ~0.002 and about 3 levels per step remain: that is where the
 fall starts to judder.
 
-This cannot be fixed by wrapping the clock the way the enter-the-matrix theme
+This cannot be fixed by wrapping the clock the way the enterthematrix theme
 does, because `wobble` uses irrational frequencies (`sin(sqrt(2)x)`,
 `sin(sqrt(5)x)`) precisely so the field never repeats, which leaves the clock no
 clean wrap point. The ways out are giving up `wobble`, accepting a jump every so
@@ -374,7 +380,7 @@ many hours, or emulating double precision in the accumulator.
 
 - Package it as a Quickshell plugin (`manifest.json` + `Service.qml` on a
   layer-shell surface).
-- Steal the two things enter-the-matrix does better: `WlrLayer.Bottom` instead of
+- Steal the two things enterthematrix does better: `WlrLayer.Bottom` instead of
   `Background`, and freezing the render when a window covers the desktop on
   battery — which matters more here, at 18 passes per frame.
 - Measure the actual GPU cost, which is still unmeasured.
@@ -387,5 +393,5 @@ come from [Rezmason/matrix](https://github.com/Rezmason/matrix), MIT. See
 
 The finding that `FrameAnimation` is required (with a `Timer` the clock advances
 but the `ShaderEffect` never repaints) comes from tymurbogach's
-[enter-the-matrix](https://github.com/tymurbogach/omarchy-enter-the-matrix-theme)
+[enterthematrix](https://github.com/tymurbogach/omarchy-enterthematrix-theme)
 theme, which solved the same problem first.

@@ -2,7 +2,7 @@
 # Remove what install.sh put in place. Leaves this source tree alone.
 set -uo pipefail
 NAME="matrix-rain"
-CMD="enter-the-matrix"
+CMD="enterthematrix"
 SHARE="${XDG_DATA_HOME:-$HOME/.local/share}/$NAME"
 BIN="$HOME/.local/bin/$CMD"
 

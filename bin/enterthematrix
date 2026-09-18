@@ -1,9 +1,9 @@
 #!/bin/bash
 # Enter the Matrix: the digital rain, fullscreen.
 #
-#   enter-the-matrix                 the default version
-#   enter-the-matrix operator        a specific one
-#   enter-the-matrix --list          what is available
+#   enterthematrix                 the default version
+#   enterthematrix operator        a specific one
+#   enterthematrix --list          what is available
 #
 # While it runs: v next version, i replay the intro, f fps, h hint, q quit.
 
@@ -24,14 +24,14 @@ case "${1:-}" in
 esac
 
 command -v qml6 >/dev/null || {
-  echo "enter-the-matrix: qml6 is missing. Install qt6-declarative." >&2; exit 1; }
+  echo "enterthematrix: qml6 is missing. Install qt6-declarative." >&2; exit 1; }
 [[ -f $ROOT/shaders/rain.frag.qsb ]] || {
-  echo "enter-the-matrix: compiled shaders are missing from $ROOT/shaders." >&2
+  echo "enterthematrix: compiled shaders are missing from $ROOT/shaders." >&2
   echo "If you are running from a source tree, run $ROOT/tools/build-shaders.sh" >&2; exit 1; }
 
 VERSION="${1:-}"
 if [[ -n $VERSION ]] && ! grep -q "^  $VERSION: {" "$ROOT/qml/Versions.js"; then
-  echo "enter-the-matrix: no version called '$VERSION'. Try --list." >&2; exit 1
+  echo "enterthematrix: no version called '$VERSION'. Try --list." >&2; exit 1
 fi
 
 if [[ -n $VERSION ]]; then

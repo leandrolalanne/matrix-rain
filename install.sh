@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install the rain so `enter-the-matrix` works from any shell.
+# Install the rain so `enterthematrix` works from any shell.
 #
 #   ./install.sh            copy into ~/.local/share and link the command
 #   ./install.sh --link     symlink instead, so edits in this tree are live
@@ -11,7 +11,7 @@
 set -uo pipefail
 
 NAME="matrix-rain"
-CMD="enter-the-matrix"
+CMD="enterthematrix"
 SRC="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 SHARE="${XDG_DATA_HOME:-$HOME/.local/share}/$NAME"
 BIN="$HOME/.local/bin"
