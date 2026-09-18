@@ -51,6 +51,51 @@ dependency.
 > credits that theme below for a finding it published first.
 
 
+## In the terminal
+
+```bash
+enterthematrix --tty          # halfwidth katakana, one cell, any font
+enterthematrix --tty --font   # the codepoints Matrix-Code.ttf maps
+```
+
+Pure stdlib Python, no window. **The same field as the shader**:
+`getRainBrightness` is ported verbatim from `shaders/rain.frag`, wobble and all,
+so a column falls here exactly as it falls there. What changes is the renderer —
+character cells instead of MSDF glyphs, and no bloom, because a terminal has
+neither.
+
+### Two glyph modes, because a terminal cannot give you both
+
+The glyph set is read from **Matrix-Code.ttf's own cmap**: 58 codepoints, 34 of
+them katakana plus digits and symbols. The font is parsed at runtime if it is in
+`~/Downloads` or installed; otherwise a baked-in copy of the set is used.
+
+The catch is that the font's katakana are **fullwidth**. A terminal reserves two
+cells for those (Unicode decides that, not the font) while every glyph in
+Matrix-Code has the same 0.934 em advance, about one cell.
+
+| | glyphs | cells | font |
+|---|---|---|---|
+| default | 56, katakana folded to their halfwidth twins | 1 | any |
+| `--font` | 56, the font's own codepoints | 2 | needs Matrix-Code set in your terminal |
+
+So: a tight grid with near-identical shapes from any font, or the film's exact
+glyphs sitting loose in double-width cells. The font has no halfwidth katakana
+at all, so there is no third option.
+
+### One thing that had to change
+
+`raindropLength` is scaled to the window instead of being fixed at upstream's
+0.75. That value is a 75-row period, which is right for the shader — 1080p at
+9pt is 72 rows, so one drop fills the screen. A terminal is half that tall, and
+a fixed 0.75 shows less than half a drop: the rain reads as blocks rather than
+streaks. Measured, the on-screen brightness span went from 0.36 to 0.99 once it
+scaled.
+
+It is denser than `cmatrix` and friends, because it is the shader's brightness
+curve rather than a sparse random one.
+
+
 ## Developing
 
 ```bash
@@ -191,6 +236,7 @@ is what:
 | `tools/make-marker.sh` | source | regenerates the marker offscreen |
 | `qml/Main.qml` | **product** | the fullscreen app the command runs |
 | `install.sh`, `uninstall.sh`, `bin/` | **product** | the install |
+| `bin/enterthematrix-tty` | **product** | the terminal renderer |
 | `dev/` | development | `main.qml` is the preview, `grab.qml` captures without a screen |
 | `tools/preview.sh` | development | opens the preview, and the reference beside it |
 | `tools/COMPARISON.md` | development | how to measure against the reference without measuring wrong |
