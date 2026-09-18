@@ -1,9 +1,9 @@
-// Captura un cuadro de la lluvia a un PNG, sin ventana visible ni gestor de
-// ventanas de por medio. `grabToImage` renderiza el item a su propio buffer,
-// asi que el resultado no depende de que este tapado, ni de en que workspace
-// caiga, ni de como lo tile Hyprland.
+// Grab a frame of the rain to a PNG, with no visible window and no window
+// manager in the way. `grabToImage` renders the item into its own buffer, so
+// the result does not depend on the item being visible, on which workspace it
+// lands, or on how the compositor tiles it.
 //
-// Uso: qml6 dev/grab.qml -- <salida.png> [ancho] [alto] [segundos] [resolution] [fontSize] [fontAdvanceEm]
+// Usage: qml6 dev/grab.qml -- <out.png> [width] [height] [seconds] [resolution] [fontSize] [fontAdvanceEm]
 import QtQuick
 import QtQuick.Window
 import "../qml"
@@ -39,6 +39,8 @@ Window {
     grabTimer.start()
   }
 
+  // The item deliberately lives outside the visible window: it still renders
+  // because grabToImage draws it into a buffer of its own.
   MatrixRain {
     id: rain
     width: win.outW
@@ -52,8 +54,10 @@ Window {
   Timer {
     id: grabTimer
     repeat: false
+    // Give the rain a moment first: freshly born it has gaps and the grab would
+    // come out sparse.
     onTriggered: rain.grabToImage(function(r) {
-      console.log(r.saveToFile(win.outPath) ? "ok" : "ERROR al escribir")
+      console.log(r.saveToFile(win.outPath) ? "ok" : "ERROR writing file")
       Qt.quit()
     }, Qt.size(win.outW, win.outH))
   }

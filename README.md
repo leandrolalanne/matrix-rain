@@ -1,49 +1,47 @@
 # omarchy-matrix-rain
 
-Port nativo de la lluvia digital de [Rezmason/matrix](https://github.com/Rezmason/matrix)
-a un shader de Qt Quick, para usarla como fondo de escritorio sin pagar el
-costo de un navegador.
+The Matrix digital rain from [Rezmason/matrix](https://github.com/Rezmason/matrix),
+ported to a native Qt Quick shader so it can run as a desktop background without
+paying for a browser.
 
-**Estado: lluvia y bloom funcionando. Queda una diferencia de brillo en los
-medios tonos, identificada pero sin confirmar (ver Fidelidad).**
+**Status: rain and bloom working. Not yet packaged as a plugin.**
 
 ```bash
-tools/build-shaders.sh      # compila shaders/*.frag a .qsb (solo si tocas un .frag)
-tools/preview.sh            # vista previa en una ventana
-tools/preview.sh --ambos    # el port y el original de Rezmason, lado a lado
-qml6 dev/main.qml           # equivalente a preview.sh, directo
+tools/build-shaders.sh      # compile shaders/*.frag to .qsb (only if you edit a .frag)
+tools/preview.sh            # preview in a window
+tools/preview.sh --both     # the port and Rezmason side by side
+qml6 dev/main.qml           # same as preview.sh, directly
 ```
 
-Super+F pone en pantalla completa la ventana enfocada.
+Super+F fullscreens the focused window.
 
-## Por que existe
+## Why this exists
 
-Correr el Rezmason real en un WebView layer-shell funciona, pero cuesta
-**~880 MB de RAM y ~35% de un core** con dos monitores: un proceso WebKit
-completo por pantalla. Un `ShaderEffect` nativo corre dentro del proceso de
-Quickshell que ya existe y no suma ninguno.
+Running the real Rezmason in a WebKit layer-shell surface works, but it costs
+**~880 MB of RAM and ~35% of one core** with two monitors: a full WebKit process
+per screen. A native `ShaderEffect` runs inside the Quickshell process that is
+already there and adds none.
 
-## Lo que hace posible el port
+## What makes the port possible
 
-El original corre cuatro ping-pong buffers en half float (intro, raindrop,
-symbol, effect) y encadena `rain -> bloom -> palette -> quilt`. Parece
-irreproducible en un solo paso, pero **para la version `classic` ese estado no
-hace falta**, y se puede demostrar leyendo los defaults:
+Upstream runs four ping-pong buffers in half float (intro, raindrop, symbol,
+effect) and chains `rain -> bloom -> palette -> quilt`. That looks impossible to
+reproduce in a single pass, but **for the `classic` version none of that state is
+needed**, and you can prove it from the defaults:
 
-| Default | Valor | Consecuencia |
+| Default | Value | Consequence |
 |---|---|---|
-| `brightnessDecay` | `1.0` | `mix(previo, nuevo, 1.0)` descarta el previo |
-| `skipIntro` | `true` | el intro devuelve `2.0` fijo, y `max(0, 1 - a*5)` da 0 |
-| `rippleTypeName` | `null` | `multipliedEffects=1`, `addedEffects=0`: no-op |
-| `classic` | `{}` | no override ninguno de los anteriores |
+| `brightnessDecay` | `1.0` | `mix(previous, new, 1.0)` discards the previous frame |
+| `skipIntro` | `true` | the intro returns a constant `2.0`, so `max(0, 1 - a*5)` is 0 |
+| `rippleTypeName` | `null` | `multipliedEffects=1`, `addedEffects=0`: a no-op |
+| `classic` | `{}` | overrides none of the above |
 
-Queda una funcion pura de (columna, fila, tiempo).
+What remains is a pure function of (column, row, time).
 
-### El ciclado de glifos, en forma cerrada
+### Glyph cycling, in closed form
 
-Es la unica parte realmente stateful: `age` acumula por cuadro y al cruzar 1.0
-sortea simbolo nuevo con el `simTime` de ese instante. Pero los tiempos de
-switch son conocidos:
+This is the only genuinely stateful part: `age` accumulates per frame and picks a
+new symbol when it crosses 1.0. But the switch times are knowable:
 
 ```
 k      = floor(age0 + cyclesPerSecond * t)
@@ -51,257 +49,239 @@ t_k    = (k - age0) / cyclesPerSecond
 symbol = floor(glyphSequenceLength * randomFloat(screenPos + t_k))
 ```
 
-No es una aproximacion: da el mismo resultado. La unica diferencia deliberada
-es que upstream avanza por CUADRO (y por lo tanto su velocidad de ciclado
-depende del refresco); aca se fija en segundos.
+This is not an approximation — it yields the same result. The one deliberate
+difference is that upstream advances per **frame** (so its cycling speed depends
+on the refresh rate); here it is fixed in seconds.
 
-## Como se verifico
+## What each file is for
 
-No a ojo. Se capturaron el original (Chromium, `?version=classic`) y el port,
-ambos a 1920x1080 en el mismo monitor, y se midio el paso de grilla por
-autocorrelacion del perfil de brillo:
-
-```
-original  alto de celda ~24px -> 45 filas (corr 0.91)
-port      alto de celda ~24px -> 45 filas (corr 0.86)
-```
-
-Eso destapo un error real: las CELDAS son cuadradas, no la grilla. Upstream
-mapea `numColumns` a lo ANCHO y deja que las filas caigan con el mismo paso
-(24 = 1920/80). Estirar 80x80 a la pantalla achata las celdas y duplica la
-densidad vertical.
-
-La paleta se verifico traduciendo `colorToRGB.js` a Python y comparando los
-cinco stops contra la conversion propia: coinciden exacto. No hay correccion
-de gamma en ningun lado, y la rampa interpola **lineal** (no smoothstep) con
-los extremos sostenidos.
-
-## Que es cada cosa
-
-`omarchy plugin add` clona el repo **entero** en la maquina de cada usuario, asi
-que todo lo que esta aca se instala. Nada sobra, pero conviene saber que es que:
+`omarchy plugin add` clones the **whole** repo onto every user's machine, so
+everything here gets installed. Nothing is redundant, but it helps to know what
+is what:
 
 | | | |
 |---|---|---|
-| `qml/` | **producto** | `MatrixRain.qml` y `BloomLevel.qml`: los componentes |
-| `shaders/*.frag.qsb` | **producto** | compilados, son los que se cargan en runtime |
-| `assets/matrixcode_msdf.png` | **producto** | el atlas MSDF, de upstream sin tocar |
-| `assets/matrix-rain.live.webp` | **producto** | miniatura + marcador + fallback estatico |
-| `provider.json` | **producto** | lo que leen los consumidores |
-| `LICENSE`, `LICENSE.rezmason` | **producto** | MIT propio y el de upstream |
-| `shaders/*.frag` | fuente | el GLSL del que salen los `.qsb` |
-| `tools/build-shaders.sh` | fuente | los compila; solo hace falta si tocas un `.frag` |
-| `tools/make-marker.sh` | fuente | regenera el marcador offscreen |
-| `dev/` | desarrollo | `main.qml` es el preview, `grab.qml` captura sin pantalla |
-| `tools/preview.sh` | desarrollo | abre el preview, y el original al lado |
-| `tools/COMPARACION.md` | desarrollo | como medir contra el original sin medir mal |
+| `qml/` | **product** | `MatrixRain.qml` and `BloomLevel.qml`: the components |
+| `shaders/*.frag.qsb` | **product** | compiled; these are what load at runtime |
+| `assets/matrixcode_msdf.png` | **product** | the MSDF atlas, untouched from upstream |
+| `assets/matrix-rain.live.webp` | **product** | thumbnail + marker + static fallback |
+| `provider.json` | **product** | what consumers read |
+| `LICENSE`, `LICENSE.rezmason` | **product** | ours and upstream's, both MIT |
+| `shaders/*.frag` | source | the GLSL the `.qsb` are built from |
+| `tools/build-shaders.sh` | source | compiles them; only needed if you edit a `.frag` |
+| `tools/make-marker.sh` | source | regenerates the marker offscreen |
+| `dev/` | development | `main.qml` is the preview, `grab.qml` captures without a screen |
+| `tools/preview.sh` | development | opens the preview, and the reference beside it |
+| `tools/COMPARISON.md` | development | how to measure against the reference without measuring wrong |
 
-Los `.qsb` estan versionados a proposito aunque sean artefactos de compilacion:
-el usuario que instala el plugin no va a correr `qsb`.
+The `.qsb` files are committed on purpose even though they are build artifacts:
+whoever installs the plugin is not going to run `qsb`.
 
-El marcador es WebP y no PNG porque sobre ruido verde da 76% menos peso siendo
-visualmente indistinguible, y era el 94% del repo.
+The marker is WebP rather than PNG because over green noise it is 76% smaller
+while being visually indistinguishable, and it used to be 94% of the repo.
 
+## Layout model: terminal, not zoom
 
-## Modelo de layout: terminal, no zoom
-
-Se configura **en puntos**, como una terminal. La celda sale de las metricas de
-la fuente y las columnas son cuantas entran.
+Size is configured **in points**, like a terminal. The cell comes from the font
+metrics and the column count is however many fit.
 
 ```qml
-fontSize: 9            // el unico numero de tamaño
-fontLineHeightEm: 1.000   // Matrix-Code.ttf: ascent 960 - descent(-64) + lineGap 0, sobre upm 1024
-fontAdvanceEm:    0.934   // avance dominante 956 sobre upm 1024
+fontSize: 9               // the only size knob
+fontLineHeightEm: 1.000   // Matrix-Code.ttf: ascent 960 - descent(-64) + lineGap 0, over upm 1024
+fontAdvanceEm:    0.934   // dominant advance 956 over upm 1024
 ```
 
-Una terminal **no escala con la ventana, escala con el DPI**:
+A terminal **does not scale with the window, it scales with DPI**:
 
-- Redimensionas la ventana -> cambia la cantidad de celdas, el glifo no se mueve.
-- La movés a otro monitor -> mismo tamaño aparente, distinta cantidad de columnas.
+- Resize the window -> the cell count changes, the glyph does not move.
+- Move it to another monitor -> same apparent size, different column count.
 
-Los px logicos de Qt ya son la unidad independiente del DPI, asi que alcanza con
-convertir puntos a px logicos a 96 DPI. Verificado:
+Qt's logical pixels are already the DPI-independent unit, so converting points to
+logical pixels at 96 DPI is enough. Verified:
 
 ```
-ventana 1280x720  ->  paso 25px,  36 filas x 69 columnas
-ventana  640x360  ->  paso 25px,  18 filas x 34 columnas
+window 1280x720  ->  25px pitch,  36 rows x 69 columns
+window  640x360  ->  25px pitch,  18 rows x 34 columns
 ```
 
-Mismo paso, distinta grilla. Eso es reflujo de terminal.
+Same pitch, different grid. That is terminal reflow.
 
-| font-size | celda | grilla a 1536x864 logicos |
+| font-size | cell | grid at 1536x864 logical |
 |---|---|---|
 | **9 pt** | 12.0 x 11.2 px | **137 x 72** |
 | 12 pt | 16.0 x 14.9 px | 103 x 54 |
 | 15 pt | 20.0 x 18.7 px | 82 x 43 |
 
-**Es una divergencia deliberada de upstream.** Rezmason fija `numColumns: 80` y
-estira: al redimensionar hace zoom y nunca refluye. La idea de este port es que
-la lluvia se comporte como texto de verdad, que es de donde sale su
-autenticidad: en la pelicula el codigo esta en terminales.
+**This is a deliberate divergence from upstream.** Rezmason pins
+`numColumns: 80` and stretches: resizing zooms and never reflows. The point of
+this port is for the rain to behave like real text, which is where its
+authenticity comes from — in the film the code is on terminals.
 
-Como consecuencia, **las metricas de fidelidad contra Rezmason dejan de ser el
-objetivo** para todo lo que dependa de la grilla: a una ventana dada tenemos
-otra cantidad de columnas que el, por diseño. Lo que sigue siendo comparable es
-el color, el brillo y la forma de los glifos.
+As a consequence, **fidelity metrics against Rezmason stop being the target** for
+anything grid-dependent: at a given window size we have a different column count
+than upstream, by design. Color, brightness and glyph shape remain comparable.
 
-### El avance de la fuente
+### The font advance
 
-`fontAdvanceEm` es 0.934, parseado del TTF. La celda resultante es lo que haria
-una terminal corriendo esa fuente.
+`fontAdvanceEm` is 0.934, parsed out of the TTF. The resulting cell is what a
+terminal running that font would use.
 
-Ojo con dos alternativas que parecen razonables y no lo son:
+Two alternatives look reasonable and are not:
 
-- **0.47**, que usa enter-the-matrix, es correcto para SU atlas de katakana
-  halfwidth sacado de `ttfx`. Aplicado a este atlas achata los glifos a la mitad.
-- Las metricas de **tu terminal** (JetBrainsMono y compañia, ~0.6) describen la
-  fuente de la terminal, no la de la pelicula.
+- **0.47**, which enter-the-matrix uses, is correct for *its* atlas of halfwidth
+  katakana taken from `ttfx`. Applied to this atlas it squashes glyphs by half.
+- **Your terminal's metrics** (JetBrainsMono and friends, ~0.6) describe the
+  terminal's font, not the film's.
 
-Los glifos del atlas estan dibujados cuadrados (41x43 px medios dentro de celdas
-de 64x64), asi que con 0.934 hay una compresion horizontal del 6.6%,
-imperceptible. `cellAspect = 1.0` la elimina a costa de una grilla un pelo mas
-ancha que la que daria la fuente.
+The atlas glyphs are drawn square (41x43 px average inside 64x64 cells), so 0.934
+compresses them horizontally by 6.6%, which is imperceptible. Setting
+`fontAdvanceEm` equal to `fontLineHeightEm` removes it at the cost of a slightly
+wider grid than the font would give.
 
-
-## La cadena
+## The chain
 
 ```
-rain -> piramide de 5 niveles (high-pass -> blur H -> blur V) -> combine -> palette
+rain -> 5-level pyramid (high-pass -> blur H -> blur V) -> combine -> palette
 ```
 
-El bloom no se compone encima del color: se SUMA al brillo antes de mirar la
-rampa (`brightness = primary + bloom`), asi que un glifo brillante no solo gana
-halo sino que trepa en la paleta.
+Bloom is not composited over the color: it is **added to brightness before the
+ramp is sampled** (`brightness = primary + bloom`), so a bright glyph does not
+just gain a halo, it climbs the palette.
 
-Cada nivel de la piramide hace high-pass de la salida del high-pass del nivel
-anterior, y el downsample lo hace el `ShaderEffectSource` al renderizar a una
-textura mas chica. Un detalle de upstream que confunde: en `bloomPass.js` pasan
-`height: viewportWidth` y `width: viewportHeight`, cruzados. No es un bug — con
-el cruce el offset da exactamente un texel. Aca se pasa el texel directo.
+Each pyramid level high-passes the previous level's high-pass output, and the
+downsampling is done by the `ShaderEffectSource` rendering into a smaller
+texture. One upstream detail that reads like a bug and is not: `bloomPass.js`
+passes `height: viewportWidth` and `width: viewportHeight`, swapped. With the
+swap the offset works out to exactly one texel, which is what gets passed
+directly here.
 
-## Fidelidad
+## Fidelity
 
-Medido contra el original a igual tamaño (1600x900), **ambos offscreen**: el
-port con `Item.grabToImage()` y Rezmason con `chromium --headless=new
---screenshot`. Ni ventanas ni gestor de ventanas de por medio, asi que es
-reproducible. Ver `tools/COMPARACION.md`.
+Measured against the reference at equal size (1600x900), **both offscreen**: the
+port via `Item.grabToImage()` and Rezmason via `chromium --headless=new
+--screenshot`. No windows and no window manager involved, so it reproduces. See
+`tools/COMPARISON.md`.
 
-| metrica | original | port | delta |
+| metric | reference | port | delta |
 |---|---|---|---|
-| balance de color R/G | 0.3825 | 0.3843 | **+0.5%** |
-| balance de color B/G | 0.2422 | 0.2404 | **-0.7%** |
-| brillo de picos (p99) | 0.9333 | 0.9569 | +2.5% |
-| brillo medio | 0.1213 | 0.1126 | **-7.2%** |
-| fraccion casi negra | 0.5634 | 0.6082 | +8.0% |
-| paso de grilla | 20 px / 45 filas | 20 px / 45 filas | igual |
+| color balance R/G | 0.3825 | 0.3843 | **+0.5%** |
+| color balance B/G | 0.2422 | 0.2404 | **-0.7%** |
+| peak brightness (p99) | 0.9333 | 0.9569 | +2.5% |
+| mean brightness | 0.1213 | 0.1126 | **-7.2%** |
+| near-black fraction | 0.5634 | 0.6082 | +8.0% |
 
-Color y geometria practicamente clavados. Queda ~7% menos de brillo medio y un
-8% mas de negro puro: al original le sobra un resplandor tenue repartido que al
-port le falta. Con una varianza entre cuadros de ~5%, eso esta apenas por
-encima del ruido.
+Color and geometry are essentially nailed. What remains is ~7% less mean
+brightness and 8% more pure black: the reference has a faint glow spread
+everywhere that the port lacks. With ~5% frame-to-frame variance, that sits just
+above the noise.
 
-### Lo que NO era
+### What it was not
 
-Durante un tiempo la brecha parecia del -28%, y se atribuyo a que upstream trae
-`resolution: 0.75` en sus defaults — renderiza el canvas al 75% y deja que el
-navegador lo escale, suavizando los glifos.
+For a while the gap looked like -28%, and it was attributed to upstream's
+`resolution: 0.75` default — it renders the canvas at 75% and lets the browser
+scale it up, softening the glyphs.
 
-**Medido, esa hipotesis es falsa.** Aplicar 0.75 empeora todo:
+**Measured, that hypothesis is false.** Applying 0.75 makes everything worse:
 
-| | media | color R/G | color B/G |
+| | mean | color R/G | color B/G |
 |---|---|---|---|
 | `resolution 1.00` | -7.2% | +0.5% | -0.7% |
 | `resolution 0.75` | -15.3% | -6.2% | -13.4% |
 
-El razonamiento estaba bien; lo que estaba mal es DONDE cae el escalado.
-Upstream corre la cadena entera a esa fraccion y el navegador escala la imagen
-FINAL (`canvas.width = clientWidth * dpr * resolution`, con el canvas estirado
-por CSS). Aca solo baja la textura de lluvia y la paleta sigue a resolucion
-completa, asi que el escalado cae ANTES del mapeo de color en vez de despues:
-en vez de suavizar el color final, pierde cobertura de glifo antes de la rampa.
+The reasoning was sound; what was wrong is **where** the scaling lands. Upstream
+runs the entire chain at that fraction and the browser scales the **final image**
+(`canvas.width = clientWidth * dpr * resolution`, with the canvas stretched by
+CSS). Here only the rain texture is reduced and the palette still runs at full
+resolution, so the scaling falls *before* the color mapping instead of after: it
+loses glyph coverage ahead of the ramp rather than softening the final color.
 
-Por eso `resolution` quedo en `1.0` y es una palanca de rendimiento, no de
-fidelidad. Para que 0.75 fuera fiel habria que envolver la cadena completa
-(palette incluida) en un `ShaderEffectSource` y escalar recien la salida.
+That is why `resolution` sits at `1.0` and is a performance knob, not a fidelity
+one. For 0.75 to be faithful you would have to wrap the whole chain (palette
+included) in a `ShaderEffectSource` and scale only the output.
 
-Buena parte del -28% original tampoco era real: venia de comparar capturas de
-ventana de tamaños distintos, antes de tener medicion determinista.
+Much of the original -28% was not real either: it came from comparing window
+captures of differing sizes, before there was a deterministic measurement.
 
-## Proveedor y maquinaria
+## Provider and machinery
 
-Este repo es **solo el proveedor**: los shaders, el atlas, la paleta y el
-marcador. Lo que los monta en algun lado — plugin de Quickshell, daemon de
-wallpaper, instalador de un tema — vive afuera y lee `provider.json`.
+This repo is **only the provider**: shaders, atlas, palette and marker. Whatever
+mounts them somewhere — a Quickshell plugin, a wallpaper daemon, a theme
+installer — lives outside and reads `provider.json`.
 
-La division es deliberada, copiada del tema
-[enter-the-matrix](https://github.com/tymurbogach/omarchy-enter-the-matrix-theme):
-un segundo proveedor (otra lluvia, otro efecto) no deberia obligar a tocar una
-linea de la maquinaria.
+The split is deliberate, borrowed from the
+[enter-the-matrix](https://github.com/tymurbogach/omarchy-enter-the-matrix-theme)
+theme: a second provider (another rain, another effect) should not force a single
+line of the machinery to change.
 
 ```
-omarchy-matrix-rain     <- este repo: el efecto
-  provider.json           declara shaders, atlas, paleta, marcador, defaults
+omarchy-matrix-rain     <- this repo: the effect
+  provider.json           declares shaders, atlas, palette, marker, defaults
   shaders/  assets/  qml/
 
-omarchy-matrix-theme    <- consumidor: una estructura que se arma DESPUES, con
-                           lo que salga de aca (screensaver, fondo, arte)
+omarchy-matrix-theme    <- consumer: a structure assembled LATER, out of
+                           whatever comes from here (screensaver, background, art)
 ```
 
-### Hosts posibles
+### Possible hosts
 
-| Host | Multipaso | Que corre |
+| Host | Multipass | What runs |
 |---|---|---|
-| Quickshell (`ShaderEffect`) | si | la cadena completa, con bloom |
-| hyprglaze, shaderbg, neowall, wallrs | no | solo `rain` (sin bloom) |
-| Shadertoy | si (buffers) | la cadena completa |
+| Quickshell (`ShaderEffect`) | yes | the full chain, with bloom |
+| hyprglaze, shaderbg, neowall, wallrs | no | `rain` only (no bloom) |
+| Shadertoy | yes (buffers) | the full chain |
 
-Por eso los uniforms usan los nombres de Shadertoy (`iTime`, `iResolution`):
-el mismo shader corre en todos, y el que no soporte multipaso usa la etapa
-`rain` sola. Se pierde el bloom, no la lluvia.
+That is why the uniforms use Shadertoy's names (`iTime`, `iResolution`): the same
+shader runs everywhere, and a host without multipass uses the `rain` stage alone.
+You lose the bloom, not the rain.
 
-### Como se selecciona como fondo en Omarchy
+### How it gets selected as a background in Omarchy
 
-`assets/matrix-rain.live.webp` hace tres cosas a la vez:
+`assets/matrix-rain.live.webp` does three jobs at once:
 
-1. es la **miniatura** en el switcher de fondos,
-2. seleccionarlo es lo que **enciende** la lluvia en vivo — el consumidor mira
-   el nombre del fondo actual y busca el marcador `.live.`,
-3. si nada esta corriendo, es lo que ves: un **fondo estatico** decente.
+1. it is the **thumbnail** in the background switcher,
+2. selecting it is what **turns on** the live rain — the consumer watches the
+   current background's name for the `.live.` marker,
+3. if nothing is running, it is what you see: a decent **static background**.
 
-Va a `~/.config/omarchy/backgrounds/<slug>/`, que Omarchy lista antes que los
-del tema (`omarchy-theme-bg-next` ordena por ruta, y `.config` < `.local`).
+It goes in `~/.config/omarchy/backgrounds/<slug>/`, which Omarchy lists before
+the theme's own (`omarchy-theme-bg-next` sorts by path, and `.config` < `.local`).
 
-El marcador es `.live.` y no `-live-` a proposito: enter-the-matrix usa ese
-otro, y si estan los dos instalados encenderia su lluvia junto con la nuestra.
+The marker is `.live.` rather than `-live-` on purpose: enter-the-matrix watches
+for that other one, and with both installed it would turn its rain on alongside
+ours.
 
+## Known limitation: the clock
 
-## Pendiente
+`elapsed` grows without bound and the uniform is float32. After an hour
+`rainTime` is around 1400 and the resolution is ~1e-4 against a per-frame step of
+~0.0067, or 65 levels: invisible. Near 24 hours `rainTime` is around 35000, the
+resolution drops to ~0.002 and about 3 levels per step remain: that is where the
+fall starts to judder.
 
-- Confirmar el efecto de `resolution: 0.75` con una captura pareada valida.
-- Empaquetarlo como plugin de Quickshell sobre una superficie layer-shell.
-- Los otros presets. `operator` tiene `rippleTypeName: "box"` y por lo tanto SI
-  usa el buffer de efectos; no se verifico si los ripples son derivables.
+This cannot be fixed by wrapping the clock the way the enter-the-matrix theme
+does, because `wobble` uses irrational frequencies (`sin(sqrt(2)x)`,
+`sin(sqrt(5)x)`) precisely so the field never repeats, which leaves the clock no
+clean wrap point. The ways out are giving up `wobble`, accepting a jump every so
+many hours, or emulating double precision in the accumulator.
 
-## Limitacion conocida: el reloj
+## Still to do
 
-`elapsed` crece sin cota y el uniform es float32. A la hora `rainTime` ronda
-1400, la resolucion es ~1e-4 contra un paso por cuadro de ~0.0067: invisible.
-Cerca de las 24h `rainTime` ronda 35000, la resolucion cae a ~0.002 y quedan
-~3 niveles por paso: ahi la caida empieza a juddear.
+- Package it as a Quickshell plugin (`manifest.json` + `Service.qml` on a
+  layer-shell surface).
+- Steal the two things enter-the-matrix does better: `WlrLayer.Bottom` instead of
+  `Background`, and freezing the render when a window covers the desktop on
+  battery — which matters more here, at 18 passes per frame.
+- Measure the actual GPU cost, which is still unmeasured.
+- The other presets. `operator` has `rippleTypeName: "box"` and therefore does
+  use the effect buffer; whether ripples are derivable was never checked.
 
-No se arregla wrappeando el reloj como hace el tema enter-the-matrix, porque
-`wobble` usa frecuencias irracionales (`sin(sqrt(2)x)`, `sin(sqrt(5)x)`)
-justamente para que el campo no repita, y eso deja al reloj sin punto de wrap
-limpio. Las salidas son resignar `wobble`, aceptar un salto cada tantas horas,
-o emular doble precision en el acumulador.
+## Credits and license
 
-## Creditos y licencia
+The rain algorithm, the MSDF atlas (`assets/matrixcode_msdf.png`) and the palette
+come from [Rezmason/matrix](https://github.com/Rezmason/matrix), MIT. See
+`LICENSE.rezmason`. This port is MIT as well, see `LICENSE`.
 
-El algoritmo de la lluvia, el atlas MSDF (`assets/matrixcode_msdf.png`) y la
-paleta vienen de [Rezmason/matrix](https://github.com/Rezmason/matrix), MIT.
-Ver `LICENSE.rezmason`. Este port es MIT tambien, ver `LICENSE`.
-
-El hallazgo de que `FrameAnimation` es necesario (con `Timer` el reloj avanza
-pero el `ShaderEffect` no repinta) viene del tema
+The finding that `FrameAnimation` is required (with a `Timer` the clock advances
+but the `ShaderEffect` never repaints) comes from tymurbogach's
 [enter-the-matrix](https://github.com/tymurbogach/omarchy-enter-the-matrix-theme)
-de tymurbogach, que resolvio el mismo problema antes.
+theme, which solved the same problem first.

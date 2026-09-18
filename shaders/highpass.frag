@@ -1,6 +1,6 @@
 #version 440
-// Paso 2: recorta lo que no brilla, para que el blur solo trabaje sobre los
-// glifos encendidos. Por canal, igual que bloomPass.highPass del original.
+// Stage 2: clip away what does not glow, so the blur only works on lit glyphs.
+// Per channel, same as upstream's bloomPass.highPass.
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 layout(std140, binding = 0) uniform buf {

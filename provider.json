@@ -1,15 +1,15 @@
 {
   "//": [
-    "El proveedor. Declara QUE ofrece este repo; los adaptadores leen de aca en",
-    "vez de hardcodear rutas, nombres y constantes.",
+    "The provider. Declares WHAT this repo offers; adapters read from here",
+    "instead of hardcoding paths, names and constants.",
     "",
-    "La division es a proposito, copiada del tema enter-the-matrix: por un lado",
-    "el PROVEEDOR (shaders, atlas, paleta, marcador) y por otro la MAQUINARIA",
-    "que lo monta en algun lado (plugin de Quickshell, daemon de wallpaper,",
-    "instalador de un tema). Un segundo proveedor -- otra lluvia, otro efecto --",
-    "no deberia obligar a tocar una linea de la maquinaria.",
+    "The split is deliberate, borrowed from the enter-the-matrix theme: the",
+    "PROVIDER on one side (shaders, atlas, palette, marker) and the MACHINERY",
+    "that mounts it somewhere on the other (a Quickshell plugin, a wallpaper",
+    "daemon, a theme installer). A second provider -- another rain, another",
+    "effect -- should not force a single line of the machinery to change.",
     "",
-    "Este repo es solo el proveedor. Los consumidores viven afuera."
+    "This repo is only the provider. Consumers live outside."
   ],
 
   "id": "matrix-rain",
@@ -18,7 +18,7 @@
   "license": "MIT",
 
   "upstream": {
-    "//": "De donde sale el algoritmo. Ver LICENSE.rezmason y README.",
+    "//": "Where the algorithm comes from. See LICENSE.rezmason and README.",
     "name": "Rezmason/matrix",
     "url": "https://github.com/Rezmason/matrix",
     "version": "classic",
@@ -28,10 +28,9 @@
 
   "render": {
     "//chain": [
-      "La cadena completa, en orden. Cada etapa es un fragment shader.",
-      "Un host que NO soporte multipaso (hyprglaze y la mayoria de los daemons",
-      "de wallpaper son de un solo paso) puede correr solo `rain`: se pierde el",
-      "bloom, no la lluvia."
+      "The full chain, in order. Each stage is a fragment shader.",
+      "A host WITHOUT multipass support (hyprglaze and most wallpaper daemons",
+      "are single-pass) can run `rain` alone: you lose the bloom, not the rain."
     ],
     "chain": ["rain", "highpass", "blur", "combine", "palette"],
     "singlePass": "rain",
@@ -42,15 +41,15 @@
       "combine":  "shaders/combine.frag",
       "palette":  "shaders/palette.frag"
     },
-    "//compiled": "Los .qsb los genera tools/build-shaders.sh; solo los usa Qt.",
+    "//compiled": "The .qsb files are produced by tools/build-shaders.sh; only Qt uses them.",
     "compiledSuffix": ".qsb",
-    "//uniforms": "Nombres de Shadertoy, los que pasan hyprglaze, shaderbg, neowall y wallrs.",
+    "//uniforms": "Shadertoy names, the ones hyprglaze, shaderbg, neowall and wallrs pass.",
     "standardUniforms": ["iTime", "iResolution"],
     "bloomLevels": 5
   },
 
   "assets": {
-    "//": "El atlas es el de upstream, sin tocar: MSDF de los glifos de la trilogia.",
+    "//": "The atlas is upstream's, untouched: an MSDF of the film trilogy's glyphs.",
     "glyphAtlas": "assets/matrixcode_msdf.png",
     "glyphSequenceLength": 57,
     "glyphTextureGridSize": [8, 8],
@@ -60,13 +59,14 @@
 
   "background": {
     "//": [
-      "Como se ofrece como fondo seleccionable en Omarchy.",
-      "El PNG cumple tres funciones: miniatura en el switcher, marcador que",
-      "enciende la lluvia en vivo, y fallback estatico si el plugin no corre.",
-      "Va a ~/.config/omarchy/backgrounds/<slug>/, que Omarchy lista ANTES que",
-      "los del tema (omarchy-theme-bg-next ordena por ruta y .config < .local).",
-      "El marcador es '.live.' y no '-live-' para no chocar con enter-the-matrix,",
-      "que usa ese otro y encenderia su lluvia junto con la nuestra."
+      "How this is offered as a selectable background in Omarchy.",
+      "The image does three jobs: thumbnail in the switcher, marker that turns",
+      "the live rain on, and static fallback when nothing is running.",
+      "It goes in ~/.config/omarchy/backgrounds/<slug>/, which Omarchy lists",
+      "BEFORE the theme's own (omarchy-theme-bg-next sorts by path, and",
+      ".config < .local). The marker is '.live.' rather than '-live-' so it does",
+      "not collide with enter-the-matrix, which watches for that other one and",
+      "would turn its rain on alongside ours."
     ],
     "marker": ".live.",
     "image": "assets/matrix-rain.live.webp",
@@ -75,8 +75,9 @@
 
   "defaults": {
     "//": [
-      "Los de la version 'classic' de upstream (js/config.js).",
-      "Fuente de verdad: qml/MatrixRain.qml los refleja; si cambia uno, cambian los dos."
+      "Upstream's 'classic' values (js/config.js), except for the sizing, which",
+      "follows a terminal model instead of a fixed column count.",
+      "Source of truth: qml/MatrixRain.qml mirrors these; change one, change both."
     ],
     "fontSize": 9,
     "fontLineHeightEm": 1.000,
@@ -96,7 +97,7 @@
   },
 
   "palette": {
-    "//": "hsl(0.3, 0.9, l) de 'classic', ya convertido a RGB. El cuarto valor es la posicion del stop.",
+    "//": "'classic' hsl(0.3, 0.9, l), already converted to RGB. The fourth value is the stop position.",
     "stops": [
       [0.000, 0.000, 0.000, 0.0],
       [0.092, 0.380, 0.020, 0.2],

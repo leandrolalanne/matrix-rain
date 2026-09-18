@@ -1,6 +1,6 @@
 #version 440
-// Paso 4: aplana la piramide sumando los cinco niveles desenfocados.
-// Los niveles mas chicos pesan un poco menos; los pesos son los del original.
+// Stage 4: flatten the pyramid by summing the five blurred levels.
+// Smaller levels weigh slightly less; the weights are upstream's.
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 layout(std140, binding = 0) uniform buf {

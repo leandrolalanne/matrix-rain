@@ -1,55 +1,46 @@
 import QtQuick
 
-// Lluvia Matrix `classic`, port nativo de Rezmason/matrix.
+// The Matrix `classic` digital rain, ported from Rezmason/matrix.
 //
-// Cadena de cuatro etapas, la misma que el original:
+// Four stages, the same chain as upstream:
 //
-//   rain  ->  piramide de 5 niveles (high-pass + blur H + blur V)  ->  combine  ->  palette
+//   rain  ->  5-level pyramid (high-pass + blur H + blur V)  ->  combine  ->  palette
 //
-// El paso de lluvia no necesita estado: en `classic`, brightnessDecay=1.0
-// descarta el frame anterior, skipIntro anula el latch del intro y
-// rippleTypeName=null deja el buffer de efectos en no-op. Ver README.
+// The rain stage needs no state: in `classic`, brightnessDecay=1.0 discards the
+// previous frame, skipIntro defeats the intro latch, and rippleTypeName=null
+// leaves the effect buffer a no-op. See README.
 //
-// Los defaults son los de `classic` en js/config.js de upstream.
+// Defaults are upstream's `classic` values from js/config.js.
 
 Item {
   id: root
 
   // --- control ---
   property bool running: true
-  // El fondo no necesita 60: a 30 la caida sigue fluida y el GPU hace la mitad.
+  // A background does not need 60: at 30 the fall still reads as fluid and the
+  // GPU does half the work.
   property int fps: 30
 
-  // --- lluvia ---
+  // --- size: configured in POINTS, like a terminal ---
   //
-  // MODELO TERMINAL: manda el tamaño de celda, no la cantidad de columnas.
-  // Agrandar la ventana hace entrar MAS columnas en vez de agrandar los glifos,
-  // y bajar cellHeight es como bajar el cuerpo de la fuente en una terminal.
+  // A terminal does not scale with the window, it scales with DPI: the point
+  // size converts to pixels through the display scale, the cell comes from the
+  // font metrics, and the columns are however many fit. Moving the window to
+  // another monitor keeps the apparent size and changes the column count.
   //
-  // (Upstream hace lo contrario: fija numColumns en 80 y estira. Al redimensionar
-  // hace zoom y nunca refluye. Esta es una divergencia deliberada.)
-
-  // --- tamaño: se configura como una terminal, en PUNTOS ---
-  //
-  // Una terminal no escala con la ventana sino con el DPI: el cuerpo en puntos
-  // se convierte a pixeles segun la escala del monitor, la celda sale de las
-  // metricas de la fuente, y las columnas son cuantas entran. Mover la ventana
-  // a otro monitor mantiene el tamaño aparente y cambia la cantidad de columnas.
-  //
-  // Los px logicos de Qt ya son la unidad independiente del DPI, asi que
-  // alcanza con convertir puntos a px logicos a 96 DPI, igual que el resto del
-  // escritorio.
+  // Qt's logical pixels are already the DPI-independent unit, so converting
+  // points to logical pixels at 96 DPI is enough.
   property real fontSize: 9
   readonly property real pxPerPoint: 96 / 72
 
-  // Metricas reales de Matrix-Code.ttf, parseadas del TTF (unitsPerEm 1024):
-  //   alto de linea    ascent 960 - descent(-64) + lineGap 0 = 1024  -> 1.000 em
-  //   avance dominante 956                                          -> 0.934 em
+  // Real metrics parsed out of Matrix-Code.ttf (unitsPerEm 1024):
+  //   line height      ascent 960 - descent(-64) + lineGap 0 = 1024  -> 1.000 em
+  //   dominant advance 956                                          -> 0.934 em
   //
-  // De aca sale TODO el tamaño. Cambiar de fuente es cambiar estos dos numeros.
-  // (JetBrainsMono, para comparar: 1.320 em de linea y 0.600 de avance. Su celda
-  // da ratio 0.455, correcto para glifos halfwidth como los katakana de ttfx,
-  // no para estos que son cuadrados.)
+  // All sizing derives from these two. Changing font means changing these.
+  // (JetBrainsMono, for comparison: 1.320 em line and 0.600 advance. Its cell
+  // ratio is 0.455, correct for halfwidth glyphs like ttfx's katakana, not for
+  // these, which are square.)
   property real fontLineHeightEm: 1.000
   property real fontAdvanceEm: 0.934
 
@@ -64,32 +55,32 @@ Item {
   property real raindropLength: 0.75
   property real baseContrast: 1.1
   property real baseBrightness: -0.5
-  // Upstream avanza el ciclado por CUADRO (cycleSpeed 0.03, cycleFrameSkip 1),
-  // con lo cual su velocidad depende del refresco. Aca se fija en segundos
-  // tomando 60fps como referencia: 0.03 * 60 = 1.8 cambios por segundo.
+  // Upstream advances cycling per FRAME (cycleSpeed 0.03, cycleFrameSkip 1), so
+  // its speed depends on the refresh rate. Here it is fixed in seconds, taking
+  // 60fps as the reference: 0.03 * 60 = 1.8 changes per second.
   property real cyclesPerSecond: 1.8
 
-  // Fraccion del tamaño a la que se renderiza la lluvia. Upstream usa 0.75,
-  // pero OJO: alla la cadena ENTERA corre a esa fraccion y el navegador escala
-  // la imagen FINAL (canvas.width = clientWidth * dpr * resolution, con el
-  // canvas estirado por CSS). Aca solo baja la textura de lluvia y la paleta
-  // sigue a resolucion completa, asi que el escalado cae ANTES del mapeo de
-  // color en vez de despues.
+  // Fraction of the size the rain renders at. Upstream uses 0.75, but CAREFUL:
+  // there the entire chain runs at that fraction and the browser scales the
+  // FINAL image (canvas.width = clientWidth * dpr * resolution, with the canvas
+  // stretched by CSS). Here only the rain texture is reduced and the palette
+  // still runs at full resolution, so the scaling lands BEFORE the color
+  // mapping instead of after.
   //
-  // Medido contra el original a igual tamaño (1600x900, ambos offscreen):
+  // Measured against the reference at equal size (1600x900, both offscreen):
   //
-  //             media    color R/G   color B/G
+  //             mean     color R/G   color B/G
   //   res 1.00  -7.2%      +0.5%       -0.7%
   //   res 0.75  -15.3%     -6.2%      -13.4%
   //
-  // O sea que 0.75 con esta implementacion empeora todo, incluido el balance de
-  // color que a 1.00 esta practicamente clavado. Queda como palanca de
-  // rendimiento, no de fidelidad. Para que 0.75 sea fiel habria que envolver la
-  // cadena completa (palette incluida) y escalar recien la salida.
+  // So 0.75 in this implementation makes everything worse, including the color
+  // balance that is essentially nailed at 1.00. It stays as a performance knob,
+  // not a fidelity one. For 0.75 to be faithful you would have to wrap the whole
+  // chain (palette included) and scale only the output.
   property real resolution: 1.0
 
   // --- bloom ---
-  property real bloomSize: 0.4          // la piramide arranca a esta fraccion de la pantalla
+  property real bloomSize: 0.4          // the pyramid starts at this fraction of the screen
   property real bloomStrength: 0.7
   property real highPassThreshold: 0.1
   property bool bloomEnabled: bloomSize > 0 && bloomStrength > 0
@@ -115,19 +106,19 @@ Item {
 
   readonly property url shaderDir: Qt.resolvedUrl("../shaders/")
 
-  // --- reloj ---
+  // --- clock ---
   //
-  // LIMITACION CONOCIDA: `elapsed` crece sin cota y el uniform es float32. A la
-  // hora la resolucion es ~1e-4 contra un paso por cuadro de ~0.0067, o sea 65
-  // niveles: invisible. Cerca de las 24h quedan ~3 niveles por paso y la caida
-  // empieza a juddear. No se arregla wrappeando el reloj, porque `wobble` usa
-  // frecuencias irracionales para que el campo no repita y eso deja al reloj
-  // sin punto de wrap limpio. Ver README.
+  // KNOWN LIMITATION: `elapsed` grows without bound and the uniform is float32.
+  // After an hour the resolution is ~1e-4 against a per-frame step of ~0.0067,
+  // or 65 levels: invisible. Near 24 hours about 3 levels per step remain and
+  // the fall starts to judder. This cannot be fixed by wrapping the clock,
+  // because `wobble` uses irrational frequencies so the field never repeats,
+  // which leaves no clean wrap point. See README.
   property real elapsed: 0
 
   function restart() { root.elapsed = 0 }
 
-  // El canvas efectivo sobre el que trabaja toda la cadena.
+  // The effective canvas the whole chain works on.
   readonly property size canvasSize: Qt.size(Math.max(1, Math.floor(width * resolution)),
                                              Math.max(1, Math.floor(height * resolution)))
 
@@ -145,7 +136,7 @@ Item {
     mipmap: false
   }
 
-  // --- etapa 1: la lluvia, a brillo crudo ---
+  // --- stage 1: the rain, as raw brightness ---
   ShaderEffect {
     id: rain
     anchors.fill: parent
@@ -176,9 +167,9 @@ Item {
     visible: false
   }
 
-  // --- etapa 2: la piramide ---
-  // Cada nivel arranca del high-pass del anterior; el downsample lo hace el
-  // ShaderEffectSource al renderizar a una textura mas chica.
+  // --- stage 2: the pyramid ---
+  // Each level starts from the previous level's high-pass; the downsampling is
+  // done by the ShaderEffectSource rendering into a smaller texture.
   BloomLevel {
     id: lvl0
     anchors.fill: parent
@@ -215,7 +206,7 @@ Item {
     levelSize: root.levelSize(4)
   }
 
-  // --- etapa 3: aplanar la piramide ---
+  // --- stage 3: flatten the pyramid ---
   ShaderEffect {
     id: combine
     anchors.fill: parent
@@ -236,7 +227,7 @@ Item {
     visible: false
   }
 
-  // --- etapa 4: color. Es la unica etapa que se ve. ---
+  // --- stage 4: color. The only stage that is visible. ---
   ShaderEffect {
     id: palette
     anchors.fill: parent
@@ -256,12 +247,12 @@ Item {
     property variant bloomTex: bloomSource
   }
 
-  // FrameAnimation y no Timer: con Timer el reloj avanza pero el ShaderEffect
-  // no repinta, y la lluvia sale dibujada y congelada. FrameAnimation esta
-  // cableado al render loop. (Hallazgo del tema enter-the-matrix, que lo probo
-  // con logs; se respeta.)
+  // FrameAnimation and not Timer: with a Timer the clock advances but the
+  // ShaderEffect never repaints, so the rain comes out drawn and frozen.
+  // FrameAnimation is wired into the render loop. (This finding comes from the
+  // enter-the-matrix theme, which proved it with logs.)
   //
-  // Corre al refresco del monitor pero solo publica `elapsed` a `fps`.
+  // It runs at the monitor's refresh rate but only publishes `elapsed` at `fps`.
   FrameAnimation {
     running: root.running
     property real accumulated: 0

@@ -1,18 +1,18 @@
 #version 440
-// Paso 3: blur separable de 3 taps. Se corre dos veces por nivel, horizontal
-// y despues vertical, que es como se arma un gaussiano 2D barato.
+// Stage 3: separable 3-tap blur. Run twice per level, horizontal then vertical,
+// which is how you build a cheap 2D gaussian.
 //
-// Los pesos son los del original (0.442 centro, 0.279 cada lado). El offset
-// alla sale de dividir por max(width,height) con los uniformes width/height
-// CRUZADOS respecto del viewport; el efecto neto es un texel en la direccion
-// del blur, que es lo que se pasa aca directo y se lee mejor.
+// The weights are upstream's (0.442 center, 0.279 each side). There the offset
+// comes from dividing by max(width,height) with the width/height uniforms
+// SWAPPED relative to the viewport; the net effect is one texel along the blur
+// direction, which is what gets passed directly here and reads better.
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 layout(std140, binding = 0) uniform buf {
     mat4 qt_Matrix;
     float qt_Opacity;
     vec2 direction;   // (1,0) horizontal, (0,1) vertical
-    vec2 texelSize;   // 1 / tamaño de ESTE nivel de la piramide
+    vec2 texelSize;   // 1 / size of THIS pyramid level
 };
 layout(binding = 1) uniform sampler2D src;
 

@@ -1,21 +1,21 @@
 import QtQuick
 
-// Un nivel de la piramide de bloom: high-pass, blur horizontal, blur vertical.
+// One level of the bloom pyramid: high-pass, horizontal blur, vertical blur.
 //
-// El high-pass de cada nivel toma la SALIDA DEL HIGH-PASS del nivel anterior,
-// no la lluvia original: asi el downsample sucesivo lo hace el propio
-// ShaderEffectSource al renderizar a una textura mas chica, igual que el
-// original encadenando FBOs cada vez menores.
+// Each level's high-pass takes the PREVIOUS LEVEL'S HIGH-PASS OUTPUT, not the
+// original rain: the successive downsampling is done by the ShaderEffectSource
+// itself as it renders into a smaller texture, the same way upstream chains
+// ever-smaller FBOs.
 
 Item {
   id: level
 
-  property var inputTexture            // textura de entrada del high-pass
+  property var inputTexture            // input texture for the high-pass
   property real highPassThreshold: 0.1
   property size levelSize: Qt.size(64, 64)
   property url shaderDir: Qt.resolvedUrl("../shaders/")
 
-  // Lo que consume el nivel siguiente, y lo que consume el combine.
+  // What the next level consumes, and what combine consumes.
   readonly property alias highPassTexture: hpSource
   readonly property alias output: vBlurSource
 

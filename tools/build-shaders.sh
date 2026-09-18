@@ -1,5 +1,5 @@
 #!/bin/bash
-# Compila los .frag a .qsb (formato que consume ShaderEffect de Qt Quick).
+# Compile the .frag files to .qsb, the format Qt Quick's ShaderEffect consumes.
 set -euo pipefail
 QSB=${QSB:-/usr/lib/qt6/bin/qsb}
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -1,9 +1,10 @@
 #version 440
-// Paso 5: brillo -> color.
+// Stage 5: brightness -> color.
 //
-// Clave: el bloom se SUMA al brillo ANTES de mirar la rampa, no se compone
-// encima del color. Por eso un glifo brillante no solo gana halo sino que
-// trepa en la paleta. Sin este paso todo cae mas abajo y se ve apagado.
+// The key point: bloom is ADDED to brightness BEFORE the ramp is sampled, not
+// composited over the color. That is why a bright glyph does not just gain a
+// halo, it climbs the palette. Without this stage everything falls lower on the
+// ramp and reads washed out.
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 layout(std140, binding = 0) uniform buf {
@@ -16,7 +17,7 @@ layout(std140, binding = 0) uniform buf {
     vec4 colBg;
     vec4 colCursor;
     vec4 colGlint;
-    // rgb = color del stop, a = posicion del stop en la rampa
+    // rgb = the stop's color, a = its position along the ramp
     vec4 pal0;
     vec4 pal1;
     vec4 pal2;
@@ -33,9 +34,8 @@ float randomFloat(vec2 uv, float t) {
     return fract(sin(sn) * c + t);
 }
 
-// El original arma una textura 1D de 2048 muestras interpolando LINEALMENTE
-// entre stops, con los extremos sostenidos. Con smoothstep los verdes
-// intermedios salen corridos.
+// Upstream builds a 2048-sample 1D texture interpolating LINEARLY between stops,
+// with the ends held. With smoothstep the mid greens come out shifted.
 vec3 samplePalette(float t) {
     t = clamp(t, 0.0, 1.0);
     if (t <= pal0.a) return pal0.rgb;
@@ -48,7 +48,7 @@ vec3 samplePalette(float t) {
 void main() {
     vec4 brightness = texture(rainTex, qt_TexCoord0) + texture(bloomTex, qt_TexCoord0);
 
-    // Ruido para tapar el banding de la rampa.
+    // Noise to hide the ramp's banding.
     brightness -= randomFloat(gl_FragCoord.xy, iTime) * ditherMagnitude / 3.0;
 
     vec3 color = samplePalette(brightness.r)

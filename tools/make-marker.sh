@@ -1,33 +1,33 @@
 #!/bin/bash
-# Genera el PNG marcador renderizando OFFSCREEN un cuadro de la propia lluvia.
+# Generate the marker PNG by rendering a frame of the rain OFFSCREEN.
 #
-# Ese archivo cumple TRES funciones a la vez, que es lo elegante del mecanismo
-# (copiado del tema enter-the-matrix):
-#   1. es la miniatura en el switcher de fondos de Omarchy
-#   2. seleccionarlo es lo que ENCIENDE la lluvia en vivo: el consumidor mira
-#      el nombre del fondo actual y busca el marcador `.live.`
-#   3. si nada corre, es lo que ves: un fondo estatico decente
+# That file does three jobs at once, which is the elegant part of the mechanism
+# (borrowed from the enter-the-matrix theme):
+#   1. it is the thumbnail in Omarchy's background switcher
+#   2. selecting it is what TURNS ON the live rain: the consumer watches the
+#      current background's name for the `.live.` marker
+#   3. if nothing is running, it is what you see: a decent static background
 #
-# Usa Item.grabToImage y NO captura la pantalla: no depende de que la ventana
-# este visible, ni de en que workspace caiga, ni de como la tile el compositor.
-# La version anterior usaba grim y termino fotografiando el escritorio del
-# usuario en vez de la lluvia.
+# It uses Item.grabToImage and does NOT capture the screen: it does not depend on
+# the window being visible, on which workspace it lands, or on how the compositor
+# tiles it. The previous version used grim and ended up photographing the user's
+# desktop instead of the rain.
 #
-# Uso: tools/make-marker.sh [ancho] [alto] [font-size]
+# Usage: tools/make-marker.sh [width] [height] [font-size]
 
 set -uo pipefail
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="$HERE/assets/matrix-rain.live.webp"
 W="${1:-1920}"; H="${2:-1080}"; FS="${3:-9}"
 
-command -v qml6 >/dev/null || { echo "hace falta qml6 (paquete qt6-declarative)" >&2; exit 1; }
-[[ -f $HERE/shaders/rain.frag.qsb ]] || { echo "faltan los .qsb; corre tools/build-shaders.sh" >&2; exit 1; }
+command -v qml6 >/dev/null || { echo "qml6 is missing (package qt6-declarative)" >&2; exit 1; }
+[[ -f $HERE/shaders/rain.frag.qsb ]] || { echo "the .qsb files are missing; run tools/build-shaders.sh" >&2; exit 1; }
 
 TMP=$(mktemp -t marker-XXXXXX.png)
 trap 'rm -f "$TMP"' EXIT
 
-# grabToImage multiplica por el devicePixelRatio de la pantalla, asi que se pide
-# el tamaño logico que deja el resultado en los pixeles buscados.
+# grabToImage multiplies by the screen's devicePixelRatio, so ask for the
+# logical size that lands the result on the pixel count we want.
 DPR=$(hyprctl monitors -j 2>/dev/null | python3 -c '
 import json,sys
 try:
@@ -38,12 +38,12 @@ except Exception:
     print(1)' 2>/dev/null || echo 1)
 LW=$(python3 -c "print(int($W/$DPR))"); LH=$(python3 -c "print(int($H/$DPR))")
 
-echo "pidiendo ${LW}x${LH} logicos (dpr $DPR) para obtener ${W}x${H} a ${FS}pt"
+echo "requesting ${LW}x${LH} logical (dpr $DPR) to get ${W}x${H} at ${FS}pt"
 ( cd "$HERE" && qml6 dev/grab.qml -- "$TMP" "$LW" "$LH" 8 1.0 "$FS" ) 2>&1 | grep -E "^ok|ERROR" || true
 
-[[ -s $TMP ]] || { echo "no se genero la imagen" >&2; exit 1; }
+[[ -s $TMP ]] || { echo "no image was produced" >&2; exit 1; }
 
-# Normalizar al tamaño exacto y sin canal alfa: es un fondo, no una capa.
+# Normalize to the exact size and drop alpha: this is a background, not a layer.
 python3 - "$TMP" "$OUT" "$W" "$H" <<'PY'
 import sys
 from PIL import Image
@@ -51,9 +51,9 @@ src, dst, w, h = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
 im = Image.open(src).convert("RGB")
 if im.size != (w, h):
     im = im.resize((w, h), Image.LANCZOS)
-# WebP q92: 76% mas liviano que PNG y visualmente indistinguible sobre
-# ruido verde. Importa porque `omarchy plugin add` clona el repo entero
-# en la maquina de cada usuario.
+# WebP q92: 76% lighter than PNG and visually indistinguishable over green
+# noise. It matters because `omarchy plugin add` clones the whole repo onto
+# every user's machine.
 im.save(dst, format="WEBP", quality=92)
-print(f"  marcador: {dst}  {im.size[0]}x{im.size[1]}")
+print(f"  marker: {dst}  {im.size[0]}x{im.size[1]}")
 PY
