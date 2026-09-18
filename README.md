@@ -66,7 +66,7 @@ so a column falls here exactly as it falls there. What changes is the renderer �
 character cells instead of MSDF glyphs, and no bloom, because a terminal has
 neither.
 
-### Two glyph modes, because a terminal cannot give you both
+### Three glyph modes
 
 The glyph set is read from **Matrix-Code.ttf's own cmap**: 58 codepoints, 34 of
 them katakana plus digits and symbols. The font is parsed at runtime if it is in
@@ -79,7 +79,8 @@ Matrix-Code has the same 0.934 em advance, about one cell.
 | | glyphs | cells | font |
 |---|---|---|---|
 | default | 56, katakana folded to their halfwidth twins | 1 | any |
-| `--font` | 56, the font's own codepoints | 2 | needs Matrix-Code in the terminal |
+| `--font`, in place | 56, moved to plane 16 | 2 | `Matrix Code Terminal` in the chain |
+| `--font`, in a window | 56, the font's own codepoints | 2 | `Matrix-Code` as the primary |
 
 So: a tight grid with near-identical shapes from any font, or the film's exact
 glyphs in double-width cells. The font has no halfwidth katakana at all, so
@@ -92,9 +93,11 @@ implement xterm's OSC 50; the others are the same. There is no channel for it.
 
 So `--font` checks first, and takes whichever path is open:
 
-- **the terminal already resolves Matrix-Code** — it runs right here, in the
-  window you typed in, the way `cmatrix` does.
-- **it does not** — it opens one that does, ghostty, foot, alacritty or kitty,
+- **the terminal resolves `Matrix Code Terminal`** — it runs right here, in the
+  window you typed in, the way `cmatrix` does, asking for the plane 16 codepoints.
+- **it resolves `Matrix-Code` itself** — it runs here too, with the font's own
+  codepoints.
+- **neither** — it opens one that does, ghostty, foot, alacritty or kitty,
   whichever is there, the way Omarchy's own screensaver does. That terminal opens
   at **9 pt**, the same default the shader uses, so both renderers start at the
   same size. `MATRIX_FONT_SIZE` changes it.
@@ -105,30 +108,48 @@ back out.
 ### Running it in place
 
 Most terminals take a **list** of fonts and fall through to the next one for
-codepoints the first does not map. That is exactly this case — a coding font has
-no katakana — so one added line is enough:
+codepoints the first does not map, so adding Matrix-Code to that list would
+work. It would also be a trap. Matrix-Code maps real characters — digits, `:`,
+`|`, `<`, `>` — and a chain entry for it hands those to **every window of that
+terminal, forever**. Your prompt would start wearing the film's digits.
+
+So the font is moved out of the way instead. `tools/make-terminal-font.py`
+derives `MatrixCodeTerminal.ttf`, a copy of the same outlines whose every glyph
+sits at `0x100000 + its original codepoint`, in **plane 16**, the Supplementary
+Private Use Area-B. Only the `cmap` and `name` tables differ; `glyf`, `loca` and
+`hmtx` are the original's bytes.
+
+Plane 16 is empty by construction. Nerd Fonts stop at plane 15, no text a person
+reads is there, and `fc-list ':charset=100000'` returns that font and nothing
+else. So the chain entry is **inert**: it can never be reached except by a
+renderer that asks for those codepoints on purpose.
 
 ```ini
-# ~/.config/ghostty/config
-font-family = "JetBrainsMono Nerd Font"
-font-family = "Matrix-Code"
+# ~/.config/ghostty/config      (reload with ctrl+shift+, or open a new window)
+font-family = "Matrix Code Terminal"
 ```
 
 ```ini
 # ~/.config/foot/foot.ini
-font=JetBrainsMono Nerd Font:size=9, Matrix-Code:size=9
+font=JetBrainsMono Nerd Font:size=9, Matrix Code Terminal:size=9
 ```
 
 ```conf
 # ~/.config/kitty/kitty.conf
-symbol_map U+30A0-U+30FF Matrix-Code
+symbol_map U+100000-U+10FFFD Matrix Code Terminal
 ```
 
-Then `enterthematrix --tty --font` runs in place. This is **opt-in**: the
-installer never edits a terminal config, because the fallback applies to every
-window of that terminal from then on. Of Matrix-Code's 58 codepoints a coding
-font already covers the ASCII ones, so only the **39 non-Latin** ones — the
-katakana and a few symbols — would ever be drawn from it elsewhere.
+Then `enterthematrix --tty --font` runs in the window you typed in. It stays
+**opt-in**: `install.sh` puts the font in place and prints the line, but never
+edits a terminal config. That file belongs to the user.
+
+The glyphs are still padded to two cells. A plane 16 codepoint is East Asian
+Width **Ambiguous**, so a terminal gives it one cell, and one cell of an ordinary
+coding font (JetBrainsMono advances 0.6 em) is narrower than these 0.934 em
+glyphs — measured, they collide and smear. Padded, they sit at 1.2 em with the
+glyph filling 78% of its box, which is **tighter than the window mode**, where
+Matrix-Code is the primary font and its fullwidth katakana get two 0.934 em cells
+for a 50% fill.
 
 The launcher works out which terminal it is in from `TERM_PROGRAM`,
 `KITTY_WINDOW_ID` or `ALACRITTY_WINDOW_ID`, and failing that by walking up the

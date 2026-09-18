@@ -66,6 +66,12 @@ VERSIONS = {
     "operator": dict(fall=0.6, length_scale=2.0, cycles=0.6, override=0.22),
 }
 
+# MatrixCodeTerminal.ttf maps every glyph to 0x100000 + its original
+# codepoint, in plane 16. Nothing else on a system reaches there, so that font
+# can sit in a terminal's chain forever without ever supplying a real
+# character. See tools/make-terminal-font.py.
+PUA_BASE = 0x100000
+
 FALLBACK = "\"*+012345789:<>z|¦©ｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾖﾗﾘﾜｰ"
 
 # Every fullwidth katakana has a halfwidth twin, and Unicode records it as a
@@ -116,17 +122,28 @@ def font_codepoints():
     return None
 
 
-def glyph_set(use_font):
-    """The characters to rain, and how many terminal cells each one takes."""
+def glyph_set(mode):
+    """The characters to rain, and how many terminal cells each one takes.
+
+    "narrow"  the katakana folded to their halfwidth twins: one cell, any font.
+    "font"    the codepoints Matrix-Code.ttf maps, in a terminal opened with
+              that font as its primary.
+    "pua"     the same glyphs, shifted into plane 16 by MatrixCodeTerminal.ttf,
+              for a terminal that has that font in its chain. Same two cells:
+              a plane 16 codepoint is East Asian Width Ambiguous, so a terminal
+              gives it one cell, and one cell of an ordinary coding font is
+              narrower than these 0.934 em glyphs -- they collide, measured.
+    """
     import unicodedata
     cps = font_codepoints()
     if cps is None:
         return FALLBACK, 1
-    if use_font:
+    if mode in ("font", "pua"):
         # The font's own codepoints. Keep only what actually renders, and drop
         # the private-use and replacement ones the cmap also lists.
         keep = [c for c in cps if c != 0xFFFD and not (0xE000 <= c <= 0xF8FF)]
-        return "".join(chr(c) for c in keep), 2
+        shift = PUA_BASE if mode == "pua" else 0
+        return "".join(chr(shift + c) for c in keep), 2
     # Narrow mode: fold the fullwidth katakana down to their halfwidth twins and
     # keep only characters that occupy a single cell.
     half = _halfwidth_map()
@@ -171,7 +188,7 @@ def palette(t):
 
 
 class Rain:
-    def __init__(self, cols, rows, use_font=False, version="classic",
+    def __init__(self, cols, rows, glyph_mode="narrow", version="classic",
                  length=None, contrast=1.1, brightness=-0.5):
         v = VERSIONS.get(version, VERSIONS["classic"])
         self.fall, self.cycles = v["fall"], v["cycles"]
@@ -180,8 +197,8 @@ class Rain:
         self._length_fixed = length   # None means: scale it to the terminal
         self.length = length or 0.75
         self.contrast, self.brightness = contrast, brightness
-        self.glyphs, self.cell_w = glyph_set(use_font)
-        # In --font mode a rain column is two terminal cells, but the set mixes
+        self.glyphs, self.cell_w = glyph_set(glyph_mode)
+        # In the two-cell modes a rain column is two terminal cells, but the set mixes
         # the font's fullwidth katakana with narrow digits and symbols. Printing
         # a narrow one advances a single cell and every column after it on that
         # row slides left. Pad them so each glyph occupies the same width.
@@ -195,6 +212,7 @@ class Rain:
         # A rain column is cell_w terminal columns: the font's katakana are
         # Unicode-wide and the terminal gives them two.
         cols = max(1, term_cols // self.cell_w)
+        rows = max(1, rows)   # a pty can report 0x0 before it is sized
         self.cols, self.rows = cols, rows
         # A drop advances y*0.01/raindropLength per row, so upstream's 0.75 is a
         # 75-row period. That is right for the shader, where a 1080p screen at
@@ -278,8 +296,8 @@ def run(rain, fps=20):
 USAGE = """the rain, in the terminal
 
   enterthematrix --tty            halfwidth katakana, one cell, any font
-  enterthematrix --tty --font     the codepoints Matrix-Code.ttf maps, in a
-                                  terminal opened with that font
+  enterthematrix --tty --font     the codepoints Matrix-Code.ttf maps, here if
+                                  this terminal resolves them, else in a window
   enterthematrix --tty --operator the operator rhythm and density, no ripples
   enterthematrix --tty --classic  upstream's palette instead of the cool one
 
@@ -291,7 +309,9 @@ def main():
     args = sys.argv[1:]
     if "-h" in args or "--help" in args:
         print(USAGE); return
-    use_font = "--font" in args
+    # --pua is set by the launcher when this terminal already resolves the
+    # plane 16 font, which is what lets --font run in the window you typed in.
+    glyph_mode = "pua" if "--pua" in args else ("font" if "--font" in args else "narrow")
     use_palette("classic" if "--classic" in args else "cold")
     version = "operator" if "--operator" in args else "classic"
     if not sys.stdout.isatty():
@@ -299,7 +319,7 @@ def main():
     fd = sys.stdin.fileno()
     saved = termios.tcgetattr(fd)
     cols, rows = os.get_terminal_size()
-    rain = Rain(cols, rows, use_font=use_font, version=version)
+    rain = Rain(cols, rows, glyph_mode=glyph_mode, version=version)
 
     def on_resize(*_):
         c, r = os.get_terminal_size()

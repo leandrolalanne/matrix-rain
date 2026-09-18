@@ -13,8 +13,16 @@ removed=0
 if [[ -L $SHARE ]]; then rm -f "$SHARE"; echo "removed $SHARE (was a link)"; removed=1
 elif [[ -d $SHARE ]]; then rm -rf "$SHARE"; echo "removed $SHARE"; removed=1; fi
 
-FONT="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/Matrix-Code.ttf"
-[[ -e $FONT ]] && { rm -f "$FONT"; command -v fc-cache >/dev/null && fc-cache -f "$(dirname "$FONT")" >/dev/null 2>&1
-                    echo "removed $FONT"; removed=1; }
+FONTS="${XDG_DATA_HOME:-$HOME/.local/share}/fonts"
+for f in Matrix-Code.ttf MatrixCodeTerminal.ttf; do
+  [[ -e $FONTS/$f ]] || continue
+  rm -f "$FONTS/$f"; echo "removed $FONTS/$f"; removed=1; dropped_font=1
+done
+if [[ -n ${dropped_font:-} ]]; then
+  command -v fc-cache >/dev/null && fc-cache -f "$FONTS" >/dev/null 2>&1
+  # The install never wrote this line, so the uninstall does not delete it.
+  echo "NOTE: if you added  font-family = \"Matrix Code Terminal\"  to a terminal"
+  echo "      config, remove it by hand; the font it names is gone now."
+fi
 
 (( removed )) || echo "nothing to remove"

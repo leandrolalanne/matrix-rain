@@ -69,9 +69,9 @@ terminal_config() {
     done
 }
 
-# True when this terminal already resolves Matrix-Code, as its font or as a
-# fallback for the codepoints the font maps.
-terminal_has_font() {
+# True when this terminal's font chain contains the family matching $2, as its
+# primary font or as a fallback.
+terminal_resolves() {
   local file keys
   case "$1" in
     ghostty)   file="$CONFIG/ghostty/config";          keys='font-family' ;;
@@ -82,16 +82,20 @@ terminal_has_font() {
   esac
   # kitty separates key from value with a space, the others with '='. Requiring
   # one of them is also what keeps `font` from matching `font-size`.
-  terminal_config "$file" | grep -Eqi "^[[:space:]]*($keys)([[:space:]]|=)+.*matrix-?code"
+  terminal_config "$file" | grep -Eqi "^[[:space:]]*($keys)([[:space:]]|=)+.*$2"
 }
 
 # What the user would add to run it here instead. One line, in their syntax.
+# It names the plane 16 font, never Matrix-Code itself: that one maps digits and
+# punctuation, and a chain entry for it would supply those to every window of
+# that terminal from then on. The derived font maps nothing a person can type.
 font_chain_hint() {
+  local at="${CONFIG/#$HOME/\~}"
   case "$1" in
-    ghostty)   echo "font-family = \"Matrix-Code\"  to ${CONFIG/#$HOME/\~}/ghostty/config" ;;
-    foot)      echo "font=<yours>:size=9, Matrix-Code  to ${CONFIG/#$HOME/\~}/foot/foot.ini" ;;
-    kitty)     echo "symbol_map U+30A0-U+30FF Matrix-Code  to ${CONFIG/#$HOME/\~}/kitty/kitty.conf" ;;
-    alacritty) echo "family = \"Matrix-Code\"  to ${CONFIG/#$HOME/\~}/alacritty/alacritty.toml" ;;
+    ghostty)   echo "font-family = \"Matrix Code Terminal\"  to $at/ghostty/config" ;;
+    foot)      echo "Matrix Code Terminal to the font= list  in $at/foot/foot.ini" ;;
+    kitty)     echo "symbol_map U+100000-U+10FFFD Matrix Code Terminal  to $at/kitty/kitty.conf" ;;
+    alacritty) echo "Matrix Code Terminal as a fallback  in $at/alacritty/alacritty.toml" ;;
   esac
 }
 
@@ -106,7 +110,11 @@ case "${1:-}" in
     # MATRIX_IN_TERM stops a spawned instance from spawning another.
     if [[ " $* " == *" --font "* && -z ${MATRIX_IN_TERM:-} ]]; then
       app="$(terminal_app || true)"
-      if ! terminal_has_font "$app"; then
+      if terminal_resolves "$app" "matrix[- ]?code[- ]?terminal"; then
+        # The plane 16 font is in the chain, so the film's glyphs can be drawn
+        # in this very window. Nothing else to do but ask for them.
+        set -- "$@" --pua
+      elif ! terminal_resolves "$app" "matrix[- ]?code"; then
         size="${MATRIX_FONT_SIZE:-9}"
         hint="$(font_chain_hint "$app")"
         [[ -t 2 && -n $hint ]] && {

@@ -49,14 +49,32 @@ fi
 ln -sf "$SHARE/bin/$CMD" "$BIN/$CMD"
 echo "linked  $BIN/$CMD"
 
-# The film's font, so --font has something to render with. User-level, and
-# uninstall.sh takes it back out.
+# Two fonts, so --font has something to render with. User-level, and
+# uninstall.sh takes them back out.
+#
+#   Matrix-Code.ttf        the film's font as published, for the window --font
+#                          opens when it has to.
+#   MatrixCodeTerminal.ttf the same outlines moved to plane 16, for running in
+#                          the window you typed in. See tools/make-terminal-font.py.
 FONTS="${XDG_DATA_HOME:-$HOME/.local/share}/fonts"
-if [[ -f $SRC/assets/Matrix-Code.ttf ]]; then
+installed_font=0
+for f in Matrix-Code.ttf MatrixCodeTerminal.ttf; do
+  [[ -f $SRC/assets/$f ]] || continue
   mkdir -p "$FONTS"
-  cp "$SRC/assets/Matrix-Code.ttf" "$FONTS/"
-  command -v fc-cache >/dev/null && fc-cache -f "$FONTS" >/dev/null 2>&1
-  echo "installed  $FONTS/Matrix-Code.ttf"
+  cp "$SRC/assets/$f" "$FONTS/"
+  echo "installed  $FONTS/$f"
+  installed_font=1
+done
+(( installed_font )) && command -v fc-cache >/dev/null && fc-cache -f "$FONTS" >/dev/null 2>&1
+
+# Running in place is opt-in and stays that way: this never edits a terminal
+# config. The derived font maps nothing a person can type, so the line below is
+# safe to leave in forever, but it is the user's file and the user's call.
+if (( installed_font )); then
+  echo
+  echo "To run the rain in the window you type in, add to your terminal config:"
+  echo "      font-family = \"Matrix Code Terminal\"      # ghostty"
+  echo "  Without it, 'enterthematrix --tty --font' opens a window of its own."
 fi
 
 # --- check it is reachable ---
