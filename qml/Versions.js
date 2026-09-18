@@ -43,8 +43,11 @@ var versions = {
     atlas: "megacity_msdf.png",
     glyphSequenceLength: 64,
     glyphTextureGridSize: [8, 8],
-    // 40 columns upstream, half of classic's, so twice the point size.
-    fontSize: 18,
+    // Upstream pins this one at 40 columns, half of classic's, which works out
+    // to 18pt here. Held at classic's 9 on purpose: the Megacity glyph is a
+    // city seen from above, and at 18pt the grid reads as a handful of huge
+    // tiles rather than as rain.
+    fontSize: 9,
     animationSpeed: 0.5
   },
 
@@ -119,7 +122,7 @@ versions["operator-plain"] = Object.assign({}, versions.operator, {
 // rather than Object.keys(), which follows insertion order and would put
 // operator-plain last simply because it is derived after the literal.
 // provider.json's versions.available mirrors this; change one, change both.
-var order = ["classic", "operator-plain", "operator", "megacity", "resurrections"]
+var order = ["classic", "resurrections", "operator-plain", "operator", "megacity"]
 
 function names() {
   return order

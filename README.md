@@ -32,8 +32,8 @@ version (no intro — switching is not a fresh entry), `i` replay the intro, `f`
 fps, `h` hint, `q` quit.
 
 Switching prints the version's name for a couple of seconds and then lets it
-fade. The cycle order is `classic → operator-plain → operator → megacity →
-resurrections`, declared once in `qml/Versions.js` and mirrored in
+fade. The cycle order is `classic → resurrections → operator-plain → operator
+→ megacity`, declared once in `qml/Versions.js` and mirrored in
 `provider.json`.
 
 It needs **qt6-declarative** (for `qml6`) and a GPU that does OpenGL. Nothing else.
@@ -289,8 +289,13 @@ derived from `operator` rather than copied, so the two cannot drift apart.
 Two upstream keys are translated rather than copied. `numColumns` becomes
 `fontSize`, because this port sizes by point like a terminal instead of pinning
 a column count — the relative density is preserved, so upstream's 40-column
-megacity becomes 18pt against classic's 9pt. `animationSpeed` is applied by
+megacity works out to 18pt against classic's 9pt. `animationSpeed` is applied by
 scaling the time fed to the shader, which is what upstream does.
+
+`megacity` is the one version that does not take that translation. It is held at
+classic's 9pt: its glyph is a city seen from above, and at 18pt the grid reads as
+a handful of huge tiles instead of as rain. The conversion is still what tells
+you 18 is upstream's intent — this overrides it knowingly.
 
 ### The intro
 
