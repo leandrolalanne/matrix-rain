@@ -102,8 +102,12 @@ before the visible windows were computed rather than guessed.
 
 `operator` also uses `brightnessOverride`, which pins every visible glyph to one
 brightness instead of letting it fade with the raindrop. That is what flattens
-it: measured against classic, mean green goes 0.112 -> 0.271 and the near-black
-fraction goes 0.578 -> 0.099.
+it: measured against classic, mean green goes 0.111 -> 0.259 and the near-black
+fraction goes 0.582 -> 0.080.
+
+It is also the only version so far with a cell narrower than the font's own
+advance: upstream's `glyphHeightToWidth: 1.35` becomes `advance: 0.692` here
+(0.934 / 1.35), which is what crowds it.
 
 
 ### What is not here, and why

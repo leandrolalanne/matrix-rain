@@ -59,7 +59,10 @@ Window {
     fps: 60
     version: win.opt("version", "classic")
     resolution: win.num("resolution", 1.0)
-    fontAdvanceEm: win.num("advance", 0.934)
+    // Only override the version's own advance when one is asked for.
+    fontAdvanceEm: win.opts.advance !== undefined
+      ? parseFloat(win.opts.advance)
+      : Versions.pick(win.opt("version", "classic"), "advance", 0.934)
     skipIntro: win.opt("intro", "false") !== "true"
     // 0 means "leave the version's value alone".
     fontSize: win.num("fontSize", 0) > 0 ? win.num("fontSize", 0) : Versions.pick(version, "fontSize", 9)

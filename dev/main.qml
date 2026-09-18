@@ -24,7 +24,10 @@ Window {
   color: "black"
 
   // Font advance in em. All three come from parsing real TTFs.
+  // -1 means "whatever this version declares"; the rest are explicit overrides
+  // measured off real TTFs.
   readonly property var ratios: [
+    { v: -1, n: "the version's own" },
     { v: 0.934, n: "Matrix-Code.ttf" },
     { v: 0.909, n: "2 JetBrainsMono cells (fullwidth)" },
     { v: 0.455, n: "1 JetBrainsMono cell (squashes 51%)" }
@@ -37,7 +40,9 @@ Window {
     id: rain
     anchors.fill: parent
     fps: 60
-    fontAdvanceEm: win.ratios[win.ratioIdx].v
+    fontAdvanceEm: win.ratios[win.ratioIdx].v > 0
+      ? win.ratios[win.ratioIdx].v
+      : Versions.pick(win.versionNames[win.versionIdx], "advance", 0.934)
     version: win.versionNames[win.versionIdx]
   }
 
