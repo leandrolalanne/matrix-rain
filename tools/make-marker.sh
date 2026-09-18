@@ -1,69 +1,56 @@
 #!/bin/bash
-# Genera el PNG marcador capturando un cuadro de la propia lluvia.
+# Genera el PNG marcador renderizando OFFSCREEN un cuadro de la propia lluvia.
 #
 # Ese archivo cumple TRES funciones a la vez, que es lo elegante del mecanismo
 # (copiado del tema enter-the-matrix):
 #   1. es la miniatura en el switcher de fondos de Omarchy
-#   2. seleccionarlo es lo que ENCIENDE la lluvia en vivo: el plugin mira el
-#      nombre del fondo actual y busca el marcador
-#   3. si el plugin no esta corriendo, es lo que ves — un fondo estatico
-#      decente en vez de nada
+#   2. seleccionarlo es lo que ENCIENDE la lluvia en vivo: el consumidor mira
+#      el nombre del fondo actual y busca el marcador `.live.`
+#   3. si nada corre, es lo que ves: un fondo estatico decente
 #
-# Uso: tools/make-marker.sh [monitor]
+# Usa Item.grabToImage y NO captura la pantalla: no depende de que la ventana
+# este visible, ni de en que workspace caiga, ni de como la tile el compositor.
+# La version anterior usaba grim y termino fotografiando el escritorio del
+# usuario en vez de la lluvia.
+#
+# Uso: tools/make-marker.sh [ancho] [alto] [font-size]
 
 set -uo pipefail
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="$HERE/assets/matrix-rain.live.png"
-MON="${1:-}"
-TRIES=6
+W="${1:-1920}"; H="${2:-1080}"; FS="${3:-9}"
 
-command -v grim >/dev/null || { echo "hace falta grim" >&2; exit 1; }
-command -v qml6 >/dev/null || { echo "hace falta qml6" >&2; exit 1; }
+command -v qml6 >/dev/null || { echo "hace falta qml6 (paquete qt6-declarative)" >&2; exit 1; }
+[[ -f $HERE/shaders/rain.frag.qsb ]] || { echo "faltan los .qsb; corre tools/build-shaders.sh" >&2; exit 1; }
 
-if [[ -z $MON ]]; then
-  MON=$(hyprctl monitors -j | python3 -c 'import json,sys
-ms=json.load(sys.stdin)
-print(next((m["name"] for m in ms if m.get("focused")), ms[0]["name"]))')
-fi
-read -r MW MH < <(hyprctl monitors -j | python3 -c "
+TMP=$(mktemp -t marker-XXXXXX.png)
+trap 'rm -f "$TMP"' EXIT
+
+# grabToImage multiplica por el devicePixelRatio de la pantalla, asi que se pide
+# el tamaño logico que deja el resultado en los pixeles buscados.
+DPR=$(hyprctl monitors -j 2>/dev/null | python3 -c '
 import json,sys
-m = next(m for m in json.load(sys.stdin) if m['name']=='$MON')
-print(m['width'] // (m.get('scale') or 1) if False else int(m['width']/(m.get('scale') or 1)), int(m['height']/(m.get('scale') or 1)))")
+try:
+    ms = json.load(sys.stdin)
+    m = next((m for m in ms if m.get("focused")), ms[0])
+    print(m.get("scale") or 1)
+except Exception:
+    print(1)' 2>/dev/null || echo 1)
+LW=$(python3 -c "print(int($W/$DPR))"); LH=$(python3 -c "print(int($H/$DPR))")
 
-restore_cursor() { hyprctl eval 'hl.config({ cursor = { invisible = false } })' &>/dev/null || true; }
-trap restore_cursor EXIT INT TERM
+echo "pidiendo ${LW}x${LH} logicos (dpr $DPR) para obtener ${W}x${H} a ${FS}pt"
+( cd "$HERE" && qml6 dev/grab.qml -- "$TMP" "$LW" "$LH" 8 1.0 "$FS" ) 2>&1 | grep -E "^ok|ERROR" || true
 
-echo "monitor $MON, esperando ventana de ${MW}x${MH} (logico)"
-for attempt in $(seq 1 $TRIES); do
-  # Cursor invisible: si no, sale dibujado en el marcador.
-  hyprctl eval 'hl.config({ cursor = { invisible = true } })' &>/dev/null || true
-  ( cd "$HERE" && qml6 dev/fullscreen.qml ) &>/dev/null &
-  pid=$!
-  geo=""
-  for i in $(seq 1 30); do
-    sleep 0.4
-    geo=$(hyprctl clients -j | python3 -c '
-import json,sys
-for c in json.load(sys.stdin):
-    if "matrix rain fullscreen" in (c.get("title") or ""):
-        print("%d,%d %dx%d" % (c["at"][0], c["at"][1], c["size"][0], c["size"][1])); break')
-    [[ -n $geo ]] && break
-  done
-  size="${geo#* }"
-  if [[ $size == "${MW}x${MH}" ]]; then
-    # Dejar que la lluvia llene la pantalla antes de capturar: recien nacida
-    # tiene huecos y el marcador quedaria ralo.
-    sleep 6
-    grim -o "$MON" "$OUT" && echo "marcador generado: $OUT ($(python3 -c "
-from PIL import Image; im=Image.open('$OUT'); print('%dx%d' % im.size)" 2>/dev/null || echo '?'))"
-    kill $pid 2>/dev/null
-    exit 0
-  fi
-  echo "  intento $attempt: la ventana salio $size en vez de ${MW}x${MH}; reintento"
-  kill $pid 2>/dev/null
-  sleep 2
-done
+[[ -s $TMP ]] || { echo "no se genero la imagen" >&2; exit 1; }
 
-echo "No consegui una ventana a pantalla completa en $TRIES intentos." >&2
-echo "Hyprland la tila cuando el workspace tiene otras ventanas: probá en uno vacio." >&2
-exit 1
+# Normalizar al tamaño exacto y sin canal alfa: es un fondo, no una capa.
+python3 - "$TMP" "$OUT" "$W" "$H" <<'PY'
+import sys
+from PIL import Image
+src, dst, w, h = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+im = Image.open(src).convert("RGB")
+if im.size != (w, h):
+    im = im.resize((w, h), Image.LANCZOS)
+im.save(dst, optimize=True)
+print(f"  marcador: {dst}  {im.size[0]}x{im.size[1]}")
+PY
