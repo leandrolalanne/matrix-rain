@@ -6,6 +6,42 @@ paying for a browser.
 
 **Status: four versions, ripples and the intro working. Not yet packaged as a plugin.**
 
+## Install
+
+```bash
+git clone https://github.com/<you>/omarchy-matrix-rain
+cd omarchy-matrix-rain
+./install.sh
+```
+
+Then, from any shell:
+
+```bash
+enter-the-matrix                 # the default version
+enter-the-matrix operator        # a specific one
+enter-the-matrix --list          # what is available
+```
+
+While it runs: `v` next version, `i` replay the intro, `f` fps, `h` hint, `q` quit.
+
+It needs **qt6-declarative** (for `qml6`) and a GPU that does OpenGL. Nothing else.
+
+`install.sh` copies the app to `~/.local/share/matrix-rain` and links the command
+into `~/.local/bin`, the XDG layout. `./install.sh --link` symlinks the source
+tree instead, so edits are live — useful while developing. `./uninstall.sh`
+undoes either, and never follows the link when removing.
+
+This works outside Omarchy: it is a plain Qt Quick application with no Omarchy
+dependency.
+
+> The command is named after the film's line. There is also an Omarchy theme
+> called [Enter the Matrix](https://github.com/tymurbogach/omarchy-enter-the-matrix-theme),
+> unrelated to this project, whose own command is `omarchy-matrix`. This one
+> credits that theme below for a finding it published first.
+
+
+## Developing
+
 ```bash
 tools/build-shaders.sh      # compile shaders/*.frag to .qsb (only if you edit a .frag)
 tools/preview.sh            # preview in a window
@@ -138,6 +174,8 @@ is what:
 | `shaders/*.frag` | source | the GLSL the `.qsb` are built from |
 | `tools/build-shaders.sh` | source | compiles them; only needed if you edit a `.frag` |
 | `tools/make-marker.sh` | source | regenerates the marker offscreen |
+| `qml/Main.qml` | **product** | the fullscreen app the command runs |
+| `install.sh`, `uninstall.sh`, `bin/` | **product** | the install |
 | `dev/` | development | `main.qml` is the preview, `grab.qml` captures without a screen |
 | `tools/preview.sh` | development | opens the preview, and the reference beside it |
 | `tools/COMPARISON.md` | development | how to measure against the reference without measuring wrong |

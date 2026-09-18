@@ -1,0 +1,41 @@
+#!/bin/bash
+# Enter the Matrix: the digital rain, fullscreen.
+#
+#   enter-the-matrix                 the default version
+#   enter-the-matrix operator        a specific one
+#   enter-the-matrix --list          what is available
+#
+# While it runs: v next version, i replay the intro, f fps, h hint, q quit.
+
+set -uo pipefail
+
+# Resolve the install root whether this is the real file or a symlink to it.
+SELF="${BASH_SOURCE[0]}"
+while [ -L "$SELF" ]; do
+  DIR="$(cd -P "$(dirname "$SELF")" && pwd)"
+  SELF="$(readlink "$SELF")"
+  [[ $SELF != /* ]] && SELF="$DIR/$SELF"
+done
+ROOT="$(cd -P "$(dirname "$SELF")/.." && pwd)"
+
+case "${1:-}" in
+  -h|--help) sed -n '2,9p' "$SELF" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  --list)    sed -n 's/^  \([a-z]*\): {$/  \1/p' "$ROOT/qml/Versions.js"; exit 0 ;;
+esac
+
+command -v qml6 >/dev/null || {
+  echo "enter-the-matrix: qml6 is missing. Install qt6-declarative." >&2; exit 1; }
+[[ -f $ROOT/shaders/rain.frag.qsb ]] || {
+  echo "enter-the-matrix: compiled shaders are missing from $ROOT/shaders." >&2
+  echo "If you are running from a source tree, run $ROOT/tools/build-shaders.sh" >&2; exit 1; }
+
+VERSION="${1:-}"
+if [[ -n $VERSION ]] && ! grep -q "^  $VERSION: {" "$ROOT/qml/Versions.js"; then
+  echo "enter-the-matrix: no version called '$VERSION'. Try --list." >&2; exit 1
+fi
+
+if [[ -n $VERSION ]]; then
+  exec qml6 "$ROOT/qml/Main.qml" -- "version=$VERSION"
+else
+  exec qml6 "$ROOT/qml/Main.qml"
+fi
