@@ -50,6 +50,17 @@ layout(std140, binding = 0) uniform buf {
     // 0 = play the intro (the rain arrives from a blank screen), 1 = skip it.
     // Upstream's default is 1.
     float skipIntro;
+    // A global override of glyph brightness, used by `operator` to flatten the
+    // gradient. Only applies when > 0.
+    float brightnessOverride;
+    float brightnessThreshold;
+    // Ripples. -1 none, 0 box, 1 circle. Upstream keeps these in a fourth
+    // ping-pong buffer, but its shader never reads the previous state: the
+    // ripple is a pure function of (time, position), so it lives here instead.
+    float rippleType;
+    float rippleScale;
+    float rippleSpeed;
+    float rippleThickness;
 
     // Shadertoy names (iTime above, iResolution here): these are what hyprglaze,
     // shaderbg, neowall and wallrs pass, so the same shader runs on those
@@ -75,6 +86,32 @@ float randomFloat(vec2 uv) {
 // The irrational frequencies are what keep the fall from repeating.
 float wobble(float x) {
     return x + 0.3 * sin(SQRT_2 * x) + 0.2 * sin(SQRT_5 * x);
+}
+
+vec2 randomVec2(vec2 uv) {
+    return fract(vec2(sin(uv.x * 591.32 + uv.y * 154.077),
+                      cos(uv.x * 391.32 + uv.y * 49.077)));
+}
+
+// The square ripples that cross the grid in `operator`. Straight from upstream,
+// including the wobble on rippleTime.
+float getRipple(float simTime, vec2 screenPos, float glyphHeightToWidth) {
+    if (rippleType < 0.0) return 0.0;
+
+    float rippleTime = (simTime * 0.5 + sin(simTime) * 0.2) * rippleSpeed + 1.0;
+    vec2 offset = randomVec2(vec2(floor(rippleTime), 0.0)) - 0.5;
+    vec2 ripplePos = screenPos * 2.0 - 1.0 + offset;
+
+    float rippleDistance;
+    if (rippleType < 0.5) {
+        vec2 boxDistance = abs(ripplePos) * vec2(1.0, glyphHeightToWidth);
+        rippleDistance = max(boxDistance.x, boxDistance.y);
+    } else {
+        rippleDistance = length(ripplePos);
+    }
+
+    float rippleValue = fract(rippleTime) * rippleScale - rippleDistance;
+    return (rippleValue > 0.0 && rippleValue < rippleThickness) ? 0.75 : 0.0;
 }
 
 float median3(vec3 i) {
@@ -182,6 +219,15 @@ void main() {
 
     // The flash as a column switches on, and nothing once the intro is past.
     float base = (r + max(0.0, 1.0 - introProgress * 5.0)) * baseContrast + baseBrightness;
+
+    // Modes that do not fade their glyphs pin the brightness here instead.
+    if (brightnessOverride > 0.0 && base > brightnessThreshold && !isCursor) {
+        base = brightnessOverride;
+    }
+
+    // Ripples are added on top, after the override, as upstream does.
+    base += getRipple(simTime, screenPos, 1.0 / max(1e-5, cellAspect));
+
     float gate = activated ? 1.0 : 0.0;
 
     // --- glyph ---

@@ -4,7 +4,7 @@ The Matrix digital rain from [Rezmason/matrix](https://github.com/Rezmason/matri
 ported to a native Qt Quick shader so it can run as a desktop background without
 paying for a browser.
 
-**Status: three versions and the intro working. Not yet packaged as a plugin.**
+**Status: four versions, ripples and the intro working. Not yet packaged as a plugin.**
 
 ```bash
 tools/build-shaders.sh      # compile shaders/*.frag to .qsb (only if you edit a .frag)
@@ -58,13 +58,14 @@ on the refresh rate); here it is fixed in seconds.
 ## Versions
 
 ```qml
-MatrixRain { version: "classic" }       // or "megacity", "resurrections"
+MatrixRain { version: "classic" }       // or "operator", "megacity", "resurrections"
 MatrixRain { skipIntro: false }         // the rain arrives onto a blank screen
 ```
 
 | Version | What it is |
 |---|---|
 | `classic` | The code everyone knows, from the sequels' opening titles. |
+| `operator` | The first film's titles and the operators' screens: flatter, crowded, no gradient, with square ripples crossing it. |
 | `megacity` | The classic code with the Megacity as a glyph, from *Revolutions*. |
 | `resurrections` | The updated code from *Matrix Resurrections*. |
 
@@ -87,11 +88,29 @@ Upstream keeps this in a ping-pong buffer with a latch — once a cell is
 strictly increasing in `simTime`, so once it crosses it never comes back. It
 resolves in closed form and needs no state, like the rest of the rain.
 
+### Ripples
+
+`operator` has the square ripples that sweep across the grid. Upstream keeps
+them in a fourth ping-pong buffer, but **its effect shader never reads the
+previous state** — `getRipple` is a pure function of `(time, position)` — so
+they live in the rain shader here and need no buffer.
+
+They are on screen about **7% of the time**: the band crosses the visible area
+during the first 2/30 of each ~10 second cycle. Worth knowing before concluding
+they are broken, which is exactly the mistake four random captures produced here
+before the visible windows were computed rather than guessed.
+
+`operator` also uses `brightnessOverride`, which pins every visible glyph to one
+brightness instead of letting it fade with the raindrop. That is what flattens
+it: measured against classic, mean green goes 0.112 -> 0.271 and the near-black
+fraction goes 0.578 -> 0.099.
+
+
 ### What is not here, and why
 
 | | |
 |---|---|
-| `operator`, `paradise` | ripple effects, left out by choice. Technically they were feasible: the effect buffer never reads its previous state, so the ripples are closed-form too. |
+| `paradise` | ripples plus `brightnessDecay` and polar space, and it sits on the speculative *Variants* list. |
 | `3d`, `trinity`, `morpheus`, `bugs`, `holoplay` | **volumetric.** Upstream draws one quad per glyph (trinity is 3600 of them, each placed in perspective). A single fullscreen `ShaderEffect` cannot express that: `GridMesh` gives a *connected* grid, so neighbouring quads share vertices and cannot move independently in depth. It would need custom C++ geometry — which kills the install-with-one-command story — or a raymarched reimplementation, which is no longer a port. |
 | `mirror` | needs a webcam and click interaction. |
 | `nightmare` | `brightnessDecay: 0.75` is the one parameter that genuinely needs per-frame state. Approximable with a short FIR, not attempted. |

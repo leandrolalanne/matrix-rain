@@ -16,7 +16,8 @@
 //     (simTime = time * animationSpeed).
 //
 // Versions that are NOT here, and why:
-//   operator, paradise   ripple effects, excluded by choice
+//   paradise             ripples plus brightnessDecay and polar space, and it
+//                        is on the speculative Variants list
 //   3d, trinity, morpheus, bugs, holoplay
 //                        volumetric: upstream draws one quad per glyph, which a
 //                        single fullscreen ShaderEffect cannot express
@@ -45,6 +46,40 @@ var versions = {
     // 40 columns upstream, half of classic's, so twice the point size.
     fontSize: 18,
     animationSpeed: 0.5
+  },
+
+  operator: {
+    label: "Operator",
+    description: "The code as it appears in the first film's titles and on the operators' screens: flatter, crowded, no gradient, with square ripples crossing it.",
+    atlas: "matrixcode_msdf.png",
+    glyphSequenceLength: 57,
+    glyphTextureGridSize: [8, 8],
+    // 108 columns upstream: 9 * 80 / 108.
+    fontSize: 6.7,
+    // upstream's glyphHeightToWidth 1.35 makes the cell that much narrower
+    // than the font's own advance would.
+    advance: 0.692,
+    fallSpeed: 0.6,
+    raindropLength: 1.5,
+    // cycleSpeed 0.01 * 60.
+    cyclesPerSecond: 0.6,
+    glyphEdgeCrop: 0.15,
+    bloomSize: 0.6,
+    bloomStrength: 0.75,
+    highPassThreshold: 0.0,
+    cursorIntensity: 3.0,
+    cursor: [0.32, 1.0, 0.49],
+    // What flattens the gradient: every visible glyph is pinned to one
+    // brightness instead of fading with the raindrop.
+    brightnessOverride: 0.22,
+    brightnessThreshold: 0.0,
+    ripple: "box",
+    palette: [
+      [0.0, 0.0, 0.00, 0.0],
+      [0.1, 0.9, 0.42, 0.5],
+      [1.0, 1.0, 1.00, 1.0],
+      [1.0, 1.0, 1.00, 1.0]
+    ]
   },
 
   resurrections: {

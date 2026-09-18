@@ -60,7 +60,7 @@ Item {
   // ratio is 0.455, correct for halfwidth glyphs like ttfx's katakana, not for
   // these, which are square.)
   property real fontLineHeightEm: 1.000
-  property real fontAdvanceEm: 0.934
+  property real fontAdvanceEm: _pick("advance", 0.934)
 
   readonly property real cellHeight: fontSize * pxPerPoint * fontLineHeightEm
   readonly property real cellWidth:  fontSize * pxPerPoint * fontAdvanceEm
@@ -81,6 +81,20 @@ Item {
   // Border of the atlas cell to crop away before the symbol lookup.
   property real glyphEdgeCrop: _pick("glyphEdgeCrop", 0.0)
 
+  // Pins every visible glyph to one brightness instead of letting it fade with
+  // the raindrop, which is what flattens `operator`. Off when 0.
+  property real brightnessOverride: _pick("brightnessOverride", 0.0)
+  property real brightnessThreshold: _pick("brightnessThreshold", 0.0)
+
+  // "box", "circle" or "" for none. Upstream keeps ripples in a ping-pong
+  // buffer, but its shader never reads the previous state, so they are a pure
+  // function of (time, position) and need no state here either.
+  property string ripple: _pick("ripple", "")
+  property real rippleScale: _pick("rippleScale", 30.0)
+  property real rippleSpeed: _pick("rippleSpeed", 0.2)
+  property real rippleThickness: _pick("rippleThickness", 0.2)
+  readonly property real _rippleType: ripple === "box" ? 0.0 : (ripple === "circle" ? 1.0 : -1.0)
+
   // false plays the intro: the rain arrives onto a blank screen, one column at
   // a time. Upstream keeps this in a stateful buffer with a latch; here it is
   // closed form, because introTime only ever increases. See rain.frag.
@@ -88,7 +102,7 @@ Item {
   // Upstream advances cycling per FRAME (cycleSpeed 0.03, cycleFrameSkip 1), so
   // its speed depends on the refresh rate. Here it is fixed in seconds, taking
   // 60fps as the reference: 0.03 * 60 = 1.8 changes per second.
-  property real cyclesPerSecond: 1.8
+  property real cyclesPerSecond: _pick("cyclesPerSecond", 1.8)
 
   // Fraction of the size the rain renders at. Upstream uses 0.75, but CAREFUL:
   // there the entire chain runs at that fraction and the browser scales the
@@ -110,7 +124,7 @@ Item {
   property real resolution: 1.0
 
   // --- bloom ---
-  property real bloomSize: 0.4          // the pyramid starts at this fraction of the screen
+  property real bloomSize: _pick("bloomSize", 0.4)   // pyramid starts at this fraction of the screen
   property real bloomStrength: _pick("bloomStrength", 0.7)
   property real highPassThreshold: _pick("highPassThreshold", 0.1)
   property bool bloomEnabled: bloomSize > 0 && bloomStrength > 0
@@ -190,6 +204,12 @@ Item {
     property real msdfPxRange: root.msdfPxRange
     property real glyphEdgeCrop: root.glyphEdgeCrop
     property real skipIntro: root.skipIntro ? 1.0 : 0.0
+    property real brightnessOverride: root.brightnessOverride
+    property real brightnessThreshold: root.brightnessThreshold
+    property real rippleType: root._rippleType
+    property real rippleScale: root.rippleScale
+    property real rippleSpeed: root.rippleSpeed
+    property real rippleThickness: root.rippleThickness
     property size glyphTextureGridSize: root.glyphTextureGridSize
     property size glyphMSDFSize: root.glyphMSDFSize
     property variant glyphMSDF: atlas
