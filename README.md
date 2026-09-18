@@ -243,8 +243,8 @@ omarchy-matrix-rain     <- este repo: el efecto
   provider.json           declara shaders, atlas, paleta, marcador, defaults
   shaders/  assets/  qml/
 
-omarchy-matrix-theme    <- consumidor: instala el marcador en su carpeta de
-                           fondos, aporta colores de terminal, backgrounds, etc.
+omarchy-matrix-theme    <- consumidor: una estructura que se arma DESPUES, con
+                           lo que salga de aca (screensaver, fondo, arte)
 ```
 
 ### Hosts posibles

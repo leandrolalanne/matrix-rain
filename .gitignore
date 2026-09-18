@@ -3,3 +3,6 @@
 __pycache__/
 *.py[cod]
 dev/_tune.qml
+
+# Referencia de medicion, se clona a demanda (ver tools/preview.sh)
+.cache/

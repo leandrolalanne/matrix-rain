@@ -1,16 +1,20 @@
 #!/bin/bash
-# Vista previa del port, y opcionalmente del original al lado para comparar.
+# Vista previa del port.
 #
-#   tools/preview.sh            -> solo el port
-#   tools/preview.sh --original -> solo el original de Rezmason en Chromium
-#   tools/preview.sh --ambos    -> los dos, para comparar
+#   tools/preview.sh              -> el port
+#   tools/preview.sh --original   -> Rezmason, como referencia para comparar
+#   tools/preview.sh --ambos      -> los dos, lado a lado
 #
 # Ctrl+C cierra todo. Super+F pone en pantalla completa la ventana enfocada.
+#
+# El original NO vive en este repo. Se clona a demanda a un cache ignorado por
+# git, porque es una referencia de medicion y no parte del producto. Ver
+# COMPARACION.md.
 
 set -uo pipefail
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-# El original vive en el repo del theme, al lado de este.
-THEME="$(dirname -- "$HERE")/omarchy-matrix-theme"
+CACHE="$HERE/.cache/rezmason"
+UPSTREAM="https://github.com/Rezmason/matrix.git"
 
 MODE="${1:---port}"
 pids=()
@@ -24,30 +28,37 @@ launch_port() {
   echo "  port nativo levantado"
 }
 
+ensure_reference() {
+  [[ -d $CACHE/.git ]] && return 0
+  command -v git >/dev/null || { echo "hace falta git para traer la referencia" >&2; return 1; }
+  echo "  trayendo la referencia (una sola vez, a .cache/)..."
+  git clone -q --depth 1 "$UPSTREAM" "$CACHE" || { echo "no pude clonar $UPSTREAM" >&2; return 1; }
+}
+
 launch_original() {
-  [[ -d $THEME/vendor/matrix ]] || { echo "no encuentro la copia de Rezmason en $THEME/vendor/matrix" >&2; return 1; }
   command -v chromium >/dev/null || { echo "falta chromium" >&2; return 1; }
-  local portfile; portfile=$(mktemp)
-  "$THEME/bin/matrix-serve" --root "$THEME/vendor/matrix" > "$portfile" 2>/dev/null & pids+=($!)
+  ensure_reference || return 1
+  # index.html carga <script type="module">, que los navegadores bloquean sobre
+  # file:// por CORS. Hace falta un origen HTTP; es lo que sugiere su propio README.
+  local port=8731
+  ( cd "$CACHE" && exec python3 -m http.server "$port" --bind 127.0.0.1 ) >/dev/null 2>&1 & pids+=($!)
   local n=0
-  while [[ ! -s $portfile ]] && ((n++ < 100)); do sleep 0.05; done
-  local port; port=$(cat "$portfile"); rm -f "$portfile"
-  [[ $port =~ ^[0-9]+$ ]] || { echo "el servidor local no arranco" >&2; return 1; }
-  # Perfil propio y efimero: si comparte el de tu Chromium habitual, la ventana
-  # se abre en esa instancia y hereda sus flags.
+  while ! curl -s -o /dev/null "http://127.0.0.1:$port/" && ((n++ < 60)); do sleep 0.1; done
+  # Perfil efimero: con el perfil habitual la ventana se abre dentro de tu
+  # Chromium existente y hereda sus flags.
   local prof; prof=$(mktemp -d)
   chromium --user-data-dir="$prof" \
     --app="http://127.0.0.1:$port/?version=classic&suppressWarnings=true" \
     --no-first-run --no-default-browser-check --noerrdialogs \
     --ozone-platform-hint=auto >/dev/null 2>&1 & pids+=($!)
-  echo "  original (Rezmason en Chromium) levantado en el puerto $port"
+  echo "  referencia (Rezmason en Chromium) levantada"
 }
 
 case "$MODE" in
   --port)     launch_port ;;
   --original) launch_original ;;
   --ambos)    launch_port; sleep 2; launch_original ;;
-  -h|--help)  sed -n '2,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  -h|--help)  sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
   *)          echo "opcion desconocida: $MODE (proba --help)" >&2; exit 1 ;;
 esac
 

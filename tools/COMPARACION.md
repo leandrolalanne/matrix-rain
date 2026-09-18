@@ -43,10 +43,14 @@ el resultado es reproducible:
 # el port
 qml6 dev/grab.qml -- salida.png 1280 720 8 1.0     # ancho alto settle resolution
 
-# el original
+# la referencia (tools/preview.sh la clona a .cache/ la primera vez)
+cd .cache/rezmason && python3 -m http.server 8731 --bind 127.0.0.1 &
 chromium --headless=new --window-size=1600,900 --virtual-time-budget=10000 \
-  --screenshot=orig.png "http://127.0.0.1:<puerto>/?version=classic"
+  --screenshot=orig.png "http://127.0.0.1:8731/?version=classic"
 ```
+
+La referencia no vive en este repo: es una herramienta de medicion, no parte del
+producto. `tools/preview.sh` la clona a demanda a `.cache/`, que esta ignorado.
 
 Dos advertencias:
 
