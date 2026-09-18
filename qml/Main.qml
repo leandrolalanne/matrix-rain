@@ -41,6 +41,7 @@ Window {
     }
     var at = names.indexOf(startVersion !== "" ? startVersion : "classic")
     idx = at >= 0 ? at : 0
+    overlay.show(Versions.get(names[idx]).label + "   ·   v next version   ·   i intro   ·   q quit", 6000)
   }
 
   MatrixRain {
@@ -68,6 +69,8 @@ Window {
         // glyphs and palette simply take over where the old ones were.
         app.introDone = true
         app.idx = (app.idx + 1) % app.names.length
+        // Name only, and briefly: you already know the keys by now.
+        overlay.show(Versions.get(app.names[app.idx]).label, 2500)
       }
       else if (e.key === Qt.Key_I) { app.introDone = false; rain.restart() }
       else if (e.key === Qt.Key_F) rain.fps = rain.fps === 60 ? 30 : 60
@@ -75,16 +78,24 @@ Window {
     }
   }
 
-  // Fades out on its own: it is a reminder, not a UI.
+  // Fades out on its own: it is a reminder, not a UI. Shows the keys once on
+  // launch, and just the version's name when you switch.
   Text {
-    id: hint
-    property bool shown: true
+    id: overlay
+    property bool shown: false
+
+    function show(msg, ms) {
+      text = msg
+      shown = true
+      hideTimer.interval = ms
+      hideTimer.restart()
+    }
+
     anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 28 }
     color: "#4fa85f"
     font.family: "monospace"; font.pixelSize: 13
-    text: rain._v.label + "   ·   v next version   ·   i intro   ·   q quit"
     opacity: shown ? 1 : 0
     Behavior on opacity { NumberAnimation { duration: 600 } }
-    Timer { running: true; interval: 6000; onTriggered: hint.shown = false }
+    Timer { id: hideTimer; onTriggered: overlay.shown = false }
   }
 }

@@ -115,8 +115,14 @@ versions["operator-plain"] = Object.assign({}, versions.operator, {
   ripple: ""
 })
 
+// The order the `v` key cycles through, and the order `--list` prints. Explicit
+// rather than Object.keys(), which follows insertion order and would put
+// operator-plain last simply because it is derived after the literal.
+// provider.json's versions.available mirrors this; change one, change both.
+var order = ["classic", "operator-plain", "operator", "megacity", "resurrections"]
+
 function names() {
-  return Object.keys(versions)
+  return order
 }
 
 function get(name) {

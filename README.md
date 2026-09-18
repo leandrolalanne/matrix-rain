@@ -29,6 +29,11 @@ The intro plays **once, on launch**, into `classic`. While it runs: `v` next
 version (no intro — switching is not a fresh entry), `i` replay the intro, `f`
 fps, `h` hint, `q` quit.
 
+Switching prints the version's name for a couple of seconds and then lets it
+fade. The cycle order is `classic → operator-plain → operator → megacity →
+resurrections`, declared once in `qml/Versions.js` and mirrored in
+`provider.json`.
+
 It needs **qt6-declarative** (for `qml6`) and a GPU that does OpenGL. Nothing else.
 
 `install.sh` copies the app to `~/.local/share/matrix-rain` and links the command
@@ -107,8 +112,8 @@ MatrixRain { skipIntro: false }         // the rain arrives onto a blank screen
 | Version | What it is |
 |---|---|
 | `classic` | The code everyone knows, from the sequels' opening titles. |
-| `operator` | The first film's titles and the operators' screens: flatter, crowded, no gradient, with square ripples crossing it. |
-| `operator-plain` | The same, with the ripples switched off. |
+| `operator-plain` | The first film's titles and the operators' screens: flatter, crowded, no gradient. |
+| `operator` | The same, with the square ripples sweeping across it. |
 | `megacity` | The classic code with the Megacity as a glyph, from *Revolutions*. |
 | `resurrections` | The updated code from *Matrix Resurrections*. |
 

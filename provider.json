@@ -84,7 +84,7 @@
       "relative density), and animationSpeed is applied by scaling the time fed",
       "to the shader."
     ],
-    "available": ["classic", "operator", "operator-plain", "megacity", "resurrections"],
+    "available": ["classic", "operator-plain", "operator", "megacity", "resurrections"],
     "default": "classic",
     "options": {
       "skipIntro": "false plays the intro: the rain arrives onto a blank screen"
