@@ -60,7 +60,7 @@ theme, which hit the same wall first.
 ## Install
 
 ```bash
-git clone https://github.com/<you>/matrix-rain
+git clone https://github.com/leandrolalanne/matrix-rain
 cd matrix-rain
 ./install.sh
 ```
