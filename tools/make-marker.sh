@@ -39,7 +39,7 @@ except Exception:
 LW=$(python3 -c "print(int($W/$DPR))"); LH=$(python3 -c "print(int($H/$DPR))")
 
 echo "requesting ${LW}x${LH} logical (dpr $DPR) to get ${W}x${H} at ${FS}pt"
-( cd "$HERE" && qml6 dev/grab.qml -- "$TMP" "$LW" "$LH" 8 1.0 "$FS" ) 2>&1 | grep -E "^ok|ERROR" || true
+( cd "$HERE" && qml6 dev/grab.qml -- out="$TMP" w="$LW" h="$LH" settle=8 fontSize="$FS" ) 2>&1 | grep -E "^ok|ERROR" || true
 
 [[ -s $TMP ]] || { echo "no image was produced" >&2; exit 1; }
 

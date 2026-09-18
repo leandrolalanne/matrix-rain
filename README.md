@@ -4,7 +4,7 @@ The Matrix digital rain from [Rezmason/matrix](https://github.com/Rezmason/matri
 ported to a native Qt Quick shader so it can run as a desktop background without
 paying for a browser.
 
-**Status: rain and bloom working. Not yet packaged as a plugin.**
+**Status: three versions and the intro working. Not yet packaged as a plugin.**
 
 ```bash
 tools/build-shaders.sh      # compile shaders/*.frag to .qsb (only if you edit a .frag)
@@ -13,7 +13,9 @@ tools/preview.sh --both     # the port and Rezmason side by side
 qml6 dev/main.qml           # same as preview.sh, directly
 ```
 
-Super+F fullscreens the focused window.
+In the preview: `v` cycles the version, `i` replays the intro, `+`/`-` change the
+point size, `a` cycles the cell advance, `f` toggles 30/60 fps, `h` hides the
+overlay. Resize the window to watch it reflow. Super+F fullscreens.
 
 ## Why this exists
 
@@ -53,6 +55,49 @@ This is not an approximation — it yields the same result. The one deliberate
 difference is that upstream advances per **frame** (so its cycling speed depends
 on the refresh rate); here it is fixed in seconds.
 
+## Versions
+
+```qml
+MatrixRain { version: "classic" }       // or "megacity", "resurrections"
+MatrixRain { skipIntro: false }         // the rain arrives onto a blank screen
+```
+
+| Version | What it is |
+|---|---|
+| `classic` | The code everyone knows, from the sequels' opening titles. |
+| `megacity` | The classic code with the Megacity as a glyph, from *Revolutions*. |
+| `resurrections` | The updated code from *Matrix Resurrections*. |
+
+Each version is an atlas plus a parameter bundle; `qml/Versions.js` holds them
+and every value stays individually overridable from outside.
+
+Two upstream keys are translated rather than copied. `numColumns` becomes
+`fontSize`, because this port sizes by point like a terminal instead of pinning
+a column count — the relative density is preserved, so upstream's 40-column
+megacity becomes 18pt against classic's 9pt. `animationSpeed` is applied by
+scaling the time fed to the shader, which is what upstream does.
+
+### The intro
+
+`skipIntro: false` plays the opening: the rain arrives onto a blank screen one
+column at a time, with two columns deliberately starting early.
+
+Upstream keeps this in a ping-pong buffer with a latch — once a cell is
+`activated` it stays activated. **The latch is redundant**: `introTime` is
+strictly increasing in `simTime`, so once it crosses it never comes back. It
+resolves in closed form and needs no state, like the rest of the rain.
+
+### What is not here, and why
+
+| | |
+|---|---|
+| `operator`, `paradise` | ripple effects, left out by choice. Technically they were feasible: the effect buffer never reads its previous state, so the ripples are closed-form too. |
+| `3d`, `trinity`, `morpheus`, `bugs`, `holoplay` | **volumetric.** Upstream draws one quad per glyph (trinity is 3600 of them, each placed in perspective). A single fullscreen `ShaderEffect` cannot express that: `GridMesh` gives a *connected* grid, so neighbouring quads share vertices and cannot move independently in depth. It would need custom C++ geometry — which kills the install-with-one-command story — or a raymarched reimplementation, which is no longer a port. |
+| `mirror` | needs a webcam and click interaction. |
+| `nightmare` | `brightnessDecay: 0.75` is the one parameter that genuinely needs per-frame state. Approximable with a short FIR, not attempted. |
+| the *Variants* list | speculative, not wanted. |
+
+
 ## What each file is for
 
 `omarchy plugin add` clones the **whole** repo onto every user's machine, so
@@ -61,9 +106,9 @@ is what:
 
 | | | |
 |---|---|---|
-| `qml/` | **product** | `MatrixRain.qml` and `BloomLevel.qml`: the components |
+| `qml/` | **product** | `MatrixRain.qml` and `BloomLevel.qml`, plus `Versions.js` |
 | `shaders/*.frag.qsb` | **product** | compiled; these are what load at runtime |
-| `assets/matrixcode_msdf.png` | **product** | the MSDF atlas, untouched from upstream |
+| `assets/*_msdf.png` | **product** | one MSDF atlas per version, untouched from upstream |
 | `assets/matrix-rain.live.webp` | **product** | thumbnail + marker + static fallback |
 | `provider.json` | **product** | what consumers read |
 | `LICENSE`, `LICENSE.rezmason` | **product** | ours and upstream's, both MIT |
@@ -272,8 +317,6 @@ many hours, or emulating double precision in the accumulator.
   `Background`, and freezing the render when a window covers the desktop on
   battery — which matters more here, at 18 passes per frame.
 - Measure the actual GPU cost, which is still unmeasured.
-- The other presets. `operator` has `rippleTypeName: "box"` and therefore does
-  use the effect buffer; whether ripples are derivable was never checked.
 
 ## Credits and license
 

@@ -45,6 +45,11 @@ layout(std140, binding = 0) uniform buf {
     float cyclesPerSecond;
     float glyphSequenceLength;
     float msdfPxRange;
+    // Border of the atlas cell to crop away. `resurrections` uses 0.1.
+    float glyphEdgeCrop;
+    // 0 = play the intro (the rain arrives from a blank screen), 1 = skip it.
+    // Upstream's default is 1.
+    float skipIntro;
 
     // Shadertoy names (iTime above, iResolution here): these are what hyprglaze,
     // shaderbg, neowall and wallrs pass, so the same shader runs on those
@@ -111,6 +116,29 @@ float getSymbolIndex(float simTime, vec2 screenPos) {
     return floor(glyphSequenceLength * randomFloat(screenPos + tk));
 }
 
+// The intro: the first stream of rain onto a blank screen.
+//
+// Upstream keeps this in a ping-pong buffer with a latch: once a cell is
+// `activated` it stays activated. The latch is redundant, because introTime is
+// strictly increasing in simTime -- once it crosses, it never comes back. So it
+// resolves in closed form and needs no state.
+//
+// The two special columns are upstream's: the middle one and the one at 75%
+// start early, which is what makes the first drops land where the eye is.
+float introTimeAt(float simTime, float column, vec2 grid) {
+    float columnTimeOffset;
+    int col = int(column);
+    if (col == int(grid.x * 0.5)) {
+        columnTimeOffset = -1.0;
+    } else if (col == int(grid.x * 0.75)) {
+        columnTimeOffset = -2.0;
+    } else {
+        columnTimeOffset = randomFloat(vec2(column, 0.0)) * -4.0;
+        columnTimeOffset += (sin(column / grid.x * PI) - 1.0) * 2.0 - 2.5;
+    }
+    return (simTime + columnTimeOffset) * fallSpeed / grid.y * 100.0;
+}
+
 // Where the glyph sits in the atlas. Rows count from the bottom, as upstream
 // does (symbolY = gridSize.y - symbolY - 1).
 vec2 getSymbolUV(float index) {
@@ -139,13 +167,28 @@ void main() {
     // --- raindrop brightness ---
     float r = getRainBrightness(simTime, glyphPos);
     float rBelow = getRainBrightness(simTime, glyphPos + vec2(0.0, -1.0));
-    bool isCursor = r > rBelow;
 
-    float base = r * baseContrast + baseBrightness;
+    // With skipIntro the intro returns a constant 2.0, which makes introProgress
+    // land in [1,2] and the flash term max(0, 1 - p*5) exactly 0.
+    float introBase = skipIntro > 0.5 ? 2.0 : introTimeAt(simTime, glyphPos.x, grid);
+    float introProgress      = introBase - (1.0 - glyphPos.y / grid.y);
+    float introProgressBelow = introBase - (1.0 - (glyphPos.y - 1.0) / grid.y);
+    bool activated      = skipIntro > 0.5 || introProgress > 0.0;
+    bool activatedBelow = skipIntro > 0.5 || introProgressBelow > 0.0;
+
+    // The cursor also lights along the activation frontier, which is what draws
+    // the bright line leading the intro.
+    bool isCursor = r > rBelow || (activated && !activatedBelow);
+
+    // The flash as a column switches on, and nothing once the intro is past.
+    float base = (r + max(0.0, 1.0 - introProgress * 5.0)) * baseContrast + baseBrightness;
+    float gate = activated ? 1.0 : 0.0;
 
     // --- glyph ---
     float index = getSymbolIndex(simTime, screenPos);
     vec2 cellUV = fract(uv * grid);
+    // Crop the atlas cell's border, as upstream does before the symbol lookup.
+    cellUV = (cellUV - 0.5) * clamp(1.0 - glyphEdgeCrop, 0.0, 1.0) + 0.5;
     vec2 atlasUV = (cellUV + getSymbolUV(index)) / glyphTextureGridSize;
 
     vec2 unitRange = vec2(msdfPxRange) / glyphMSDFSize;
@@ -158,8 +201,8 @@ void main() {
     // Same channels as upstream's rainPass:
     //   r = base glyph brightness,  g = cursor brightness,  b = glint (0 in classic)
     // The palette is applied later, in palette.frag, AFTER bloom is added.
-    fragColor = vec4((isCursor ? 0.0 : base) * glyph,
-                     (isCursor ? base : 0.0) * glyph,
+    fragColor = vec4((isCursor ? 0.0 : base) * glyph * gate,
+                     (isCursor ? base : 0.0) * glyph * gate,
                      0.0,
                      1.0);
 }

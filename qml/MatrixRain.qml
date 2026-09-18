@@ -1,4 +1,5 @@
 import QtQuick
+import "Versions.js" as Versions
 
 // The Matrix `classic` digital rain, ported from Rezmason/matrix.
 //
@@ -15,6 +16,23 @@ import QtQuick
 Item {
   id: root
 
+  // --- version ---
+  //
+  // Which of upstream's versions to draw. See Versions.js, which also documents
+  // the ones this port deliberately leaves out. Every parameter a version sets
+  // can still be overridden individually from outside.
+  property string version: "classic"
+  readonly property var _v: Versions.get(version)
+
+  function _pick(key, fallback) {
+    return _v[key] !== undefined ? _v[key] : fallback
+  }
+  function _palStop(i, dr, dg, db, da) {
+    var pal = _v.palette
+    return pal !== undefined ? Qt.vector4d(pal[i][0], pal[i][1], pal[i][2], pal[i][3])
+                             : Qt.vector4d(dr, dg, db, da)
+  }
+
   // --- control ---
   property bool running: true
   // A background does not need 60: at 30 the fall still reads as fluid and the
@@ -30,7 +48,7 @@ Item {
   //
   // Qt's logical pixels are already the DPI-independent unit, so converting
   // points to logical pixels at 96 DPI is enough.
-  property real fontSize: 9
+  property real fontSize: _pick("fontSize", 9)
   readonly property real pxPerPoint: 96 / 72
 
   // Real metrics parsed out of Matrix-Code.ttf (unitsPerEm 1024):
@@ -51,10 +69,22 @@ Item {
   readonly property real numColumns: width  > 0 ? Math.max(1, width  / (cellHeight * cellAspect)) : 1
   readonly property real numRows:    height > 0 ? Math.max(1, height / cellHeight) : 1
 
-  property real fallSpeed: 0.3
-  property real raindropLength: 0.75
-  property real baseContrast: 1.1
-  property real baseBrightness: -0.5
+  property real fallSpeed: _pick("fallSpeed", 0.3)
+  property real raindropLength: _pick("raindropLength", 0.75)
+  property real baseContrast: _pick("baseContrast", 1.1)
+  property real baseBrightness: _pick("baseBrightness", -0.5)
+
+  // Scales the time fed to the shader, which is what upstream does
+  // (simTime = time * animationSpeed). Fall and glyph cycling scale together.
+  property real animationSpeed: _pick("animationSpeed", 1.0)
+
+  // Border of the atlas cell to crop away before the symbol lookup.
+  property real glyphEdgeCrop: _pick("glyphEdgeCrop", 0.0)
+
+  // false plays the intro: the rain arrives onto a blank screen, one column at
+  // a time. Upstream keeps this in a stateful buffer with a latch; here it is
+  // closed form, because introTime only ever increases. See rain.frag.
+  property bool skipIntro: true
   // Upstream advances cycling per FRAME (cycleSpeed 0.03, cycleFrameSkip 1), so
   // its speed depends on the refresh rate. Here it is fixed in seconds, taking
   // 60fps as the reference: 0.03 * 60 = 1.8 changes per second.
@@ -81,26 +111,31 @@ Item {
 
   // --- bloom ---
   property real bloomSize: 0.4          // the pyramid starts at this fraction of the screen
-  property real bloomStrength: 0.7
-  property real highPassThreshold: 0.1
+  property real bloomStrength: _pick("bloomStrength", 0.7)
+  property real highPassThreshold: _pick("highPassThreshold", 0.1)
   property bool bloomEnabled: bloomSize > 0 && bloomStrength > 0
 
   // --- color ---
-  property real cursorIntensity: 2.0
+  property real cursorIntensity: _pick("cursorIntensity", 2.0)
   property real glintIntensity: 1.0
   property real ditherMagnitude: 0.05
-  property vector4d pal0: Qt.vector4d(0.000, 0.000, 0.000, 0.0)
-  property vector4d pal1: Qt.vector4d(0.092, 0.380, 0.020, 0.2)
-  property vector4d pal2: Qt.vector4d(0.538, 0.970, 0.430, 0.7)
-  property vector4d pal3: Qt.vector4d(0.692, 0.980, 0.620, 0.8)
-  property vector4d colCursor: Qt.vector4d(0.7559, 1.0, 0.46, 1.0)
+  property vector4d pal0: _palStop(0, 0.000, 0.000, 0.000, 0.0)
+  property vector4d pal1: _palStop(1, 0.092, 0.380, 0.020, 0.2)
+  property vector4d pal2: _palStop(2, 0.538, 0.970, 0.430, 0.7)
+  property vector4d pal3: _palStop(3, 0.692, 0.980, 0.620, 0.8)
+  property vector4d colCursor: _v.cursor !== undefined
+    ? Qt.vector4d(_v.cursor[0], _v.cursor[1], _v.cursor[2], 1.0)
+    : Qt.vector4d(0.7559, 1.0, 0.46, 1.0)
   property vector4d colGlint: Qt.vector4d(1.0, 1.0, 1.0, 1.0)
   property vector4d colBg: Qt.vector4d(0.0, 0.0, 0.0, 1.0)
 
   // --- atlas ---
-  property url atlasSource: Qt.resolvedUrl("../assets/matrixcode_msdf.png")
-  property real glyphSequenceLength: 57
-  property size glyphTextureGridSize: Qt.size(8, 8)
+  property url atlasSource: Qt.resolvedUrl("../assets/" + _pick("atlas", "matrixcode_msdf.png"))
+  property real glyphSequenceLength: _pick("glyphSequenceLength", 57)
+  property size glyphTextureGridSize: {
+    var g = _pick("glyphTextureGridSize", [8, 8])
+    return Qt.size(g[0], g[1])
+  }
   property size glyphMSDFSize: Qt.size(512, 512)
   property real msdfPxRange: 4.0
 
@@ -142,7 +177,7 @@ Item {
     anchors.fill: parent
     fragmentShader: root.shaderDir + "rain.frag.qsb"
 
-    property real iTime: root.elapsed
+    property real iTime: root.elapsed * root.animationSpeed
     property real cellHeight: root.cellHeight
     property real cellAspect: root.cellAspect
     property size iResolution: Qt.size(width, height)
@@ -153,6 +188,8 @@ Item {
     property real cyclesPerSecond: root.cyclesPerSecond
     property real glyphSequenceLength: root.glyphSequenceLength
     property real msdfPxRange: root.msdfPxRange
+    property real glyphEdgeCrop: root.glyphEdgeCrop
+    property real skipIntro: root.skipIntro ? 1.0 : 0.0
     property size glyphTextureGridSize: root.glyphTextureGridSize
     property size glyphMSDFSize: root.glyphMSDFSize
     property variant glyphMSDF: atlas

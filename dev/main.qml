@@ -5,6 +5,8 @@
 // does not.
 //
 // Keys:
+//   v       cycle the version (classic, megacity, resurrections)
+//   i       replay the intro, from a blank screen
 //   + / -   raise and lower the font size, in points
 //   a       cycle the cell advance between the three real options
 //   f       toggle 30/60 fps
@@ -12,6 +14,7 @@
 import QtQuick
 import QtQuick.Window
 import "../qml"
+import "../qml/Versions.js" as Versions
 
 Window {
   id: win
@@ -27,19 +30,27 @@ Window {
     { v: 0.455, n: "1 JetBrainsMono cell (squashes 51%)" }
   ]
   property int ratioIdx: 0
+  readonly property var versionNames: Versions.names()
+  property int versionIdx: 0
 
   MatrixRain {
     id: rain
     anchors.fill: parent
     fps: 60
     fontAdvanceEm: win.ratios[win.ratioIdx].v
+    version: win.versionNames[win.versionIdx]
   }
 
   Item {
     anchors.fill: parent
     focus: true
     Keys.onPressed: function(e) {
-      if (e.key === Qt.Key_Plus || e.key === Qt.Key_Equal) rain.fontSize = Math.min(60, rain.fontSize + 1)
+      if (e.key === Qt.Key_V) {
+        win.versionIdx = (win.versionIdx + 1) % win.versionNames.length
+        rain.fontSize = Qt.binding(function() { return Versions.pick(rain.version, "fontSize", 9) })
+      }
+      else if (e.key === Qt.Key_I) { rain.skipIntro = false; rain.restart(); rain.skipIntro = false }
+      else if (e.key === Qt.Key_Plus || e.key === Qt.Key_Equal) rain.fontSize = Math.min(60, rain.fontSize + 1)
       else if (e.key === Qt.Key_Minus) rain.fontSize = Math.max(4, rain.fontSize - 1)
       else if (e.key === Qt.Key_A) win.ratioIdx = (win.ratioIdx + 1) % win.ratios.length
       else if (e.key === Qt.Key_F) rain.fps = rain.fps === 60 ? 30 : 60
@@ -58,7 +69,7 @@ Window {
       spacing: 2
       Text {
         color: "#9dffaa"; font.family: "monospace"; font.pixelSize: 12
-        text: "font-size " + rain.fontSize.toFixed(0) + "pt   cell " + rain.cellHeight.toFixed(1) + " x " + rain.cellWidth.toFixed(1) + " px"
+        text: rain._v.label + "   font-size " + rain.fontSize.toFixed(0) + "pt   cell " + rain.cellHeight.toFixed(1) + " x " + rain.cellWidth.toFixed(1) + " px"
             + "   grid " + Math.floor(rain.numColumns) + " x " + Math.floor(rain.numRows)
             + "   window " + win.width + "x" + win.height
       }
@@ -69,7 +80,7 @@ Window {
       }
       Text {
         color: "#2f6b3a"; font.family: "monospace"; font.pixelSize: 10
-        text: "+/- points   ·   a advance   ·   f fps   ·   h hide   ·   resize to see the reflow"
+        text: "v version   ·   i intro   ·   +/- points   ·   a advance   ·   f fps   ·   h hide   ·   resize to reflow"
       }
     }
   }
