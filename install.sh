@@ -81,8 +81,12 @@ done
 # safe to leave in forever, but it is the user's file and the user's call.
 if (( installed_font )); then
   echo
-  echo "To run the rain in the window you type in, add to your terminal config:"
-  echo "      font-family = \"Matrix Code Terminal\"      # ghostty"
+  echo "To run the rain in the window you type in, put this in its own file"
+  echo "      ~/.config/ghostty/matrix-rain.conf"
+  echo "      font-family = \"Matrix Code Terminal\""
+  echo "  and pull it in from ~/.config/ghostty/config:"
+  echo "      config-file = ?\"~/.config/ghostty/matrix-rain.conf\""
+  echo "  Its own file because font managers rewrite font-family lines in place."
   echo "  Without it, 'redpill' opens a window of its own."
 fi
 

@@ -133,9 +133,23 @@ default `redpill` opens a window that has the font. To have it run **in place**,
 like `cmatrix`, add one line to your terminal's config:
 
 ```ini
-# ~/.config/ghostty/config     (reload with ctrl+shift+, or open a new window)
+# ~/.config/ghostty/matrix-rain.conf      <- its own file
 font-family = "Matrix Code Terminal"
 ```
+```ini
+# ~/.config/ghostty/config                <- one line to pull it in
+config-file = ?"~/.config/ghostty/matrix-rain.conf"
+```
+
+Its own file, because font managers rewrite font-family lines in place. Omarchy's
+`omarchy font set`, for one, runs
+`sed -i 's/font-family = ".*"/.../g'` over `ghostty/config` — **every** matching
+line, so a fallback added there is silently replaced the next time you change
+your font, and `redpill` goes back to opening a window. A separate file is not
+touched. Ghostty reads config at startup: open a new window, or `ctrl+shift+,`.
+
+foot and alacritty have the same exposure and the same answer, an `include=`.
+kitty's `symbol_map` is not a font-family line, so it can go straight in:
 
 ```ini
 # ~/.config/foot/foot.ini
@@ -151,8 +165,8 @@ That font is **inert by design**. It is a derived copy whose glyphs live in
 Unicode plane 16, a private area nothing else on a system uses, so it can sit in
 your font chain forever without ever supplying a character you might type. The
 film's font itself is not used for this, precisely because it *does* map real
-digits and punctuation. `redpill` detects the line and runs in place from then
-on.
+digits and punctuation. `redpill` reads your terminal's config, and the files it
+includes, and runs in place from then on.
 
 ## Licence
 
