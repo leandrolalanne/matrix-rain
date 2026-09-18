@@ -61,17 +61,31 @@
   "background": {
     "//": [
       "How this is offered as a selectable background in Omarchy.",
-      "The image does three jobs: thumbnail in the switcher, marker that turns",
+      "Each image does three jobs: thumbnail in the switcher, marker that turns",
       "the live rain on, and static fallback when nothing is running.",
-      "It goes in ~/.config/omarchy/backgrounds/<slug>/, which Omarchy lists",
+      "They go in ~/.config/omarchy/backgrounds/<slug>/, which Omarchy lists",
       "BEFORE the theme's own (omarchy-theme-bg-next sorts by path, and",
       ".config < .local). The marker is '.live.' rather than '-live-' so it does",
       "not collide with enter-the-matrix, which watches for that other one and",
-      "would turn its rain on alongside ours."
+      "would turn its rain on alongside ours.",
+      "",
+      "One image per version, named '<NN>-<version>.live.webp'. The consumer",
+      "reads the version straight out of the filename: strip the ordering",
+      "prefix and the marker, and what is left is a key in versions.available.",
+      "The prefix exists because omarchy-theme-bg-next sorts by path, so it is",
+      "what fixes the cycling order."
     ],
     "marker": ".live.",
-    "image": "assets/matrix-rain.live.webp",
-    "generator": "tools/make-marker.sh"
+    "nameFormat": "<NN>-<version>.live.webp",
+    "dir": "assets/backgrounds",
+    "generator": "tools/make-marker.sh",
+    "//versions": [
+      "A subset of versions.available. 'operator' is deliberately absent: its",
+      "square ripples sweep the whole screen every ~10 seconds, which is an",
+      "event on a wallpaper rather than texture. operator-plain is that look",
+      "without them."
+    ],
+    "versions": ["classic", "resurrections", "operator-plain", "megacity"]
   },
 
   "versions": {

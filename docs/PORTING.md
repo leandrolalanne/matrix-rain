@@ -409,15 +409,23 @@ You lose the bloom, not the rain.
 
 ### How it gets selected as a background in Omarchy
 
-`assets/matrix-rain.live.webp` does three jobs at once:
+Each file in `assets/backgrounds/`, named `<NN>-<version>.live.webp`, does
+three jobs at once:
 
 1. it is the **thumbnail** in the background switcher,
 2. selecting it is what **turns on** the live rain — the consumer watches the
    current background's name for the `.live.` marker,
 3. if nothing is running, it is what you see: a decent **static background**.
 
-It goes in `~/.config/omarchy/backgrounds/<slug>/`, which Omarchy lists before
+They go in `~/.config/omarchy/backgrounds/<slug>/`, which Omarchy lists before
 the theme's own (`omarchy-theme-bg-next` sorts by path, and `.config` < `.local`).
+That same path sort is why the names carry a numeric prefix: it is what fixes
+the cycling order. The consumer reads the version out of the filename — strip
+the prefix and the marker, and what is left is a key in `versions.available`.
+
+`operator` has no background on purpose. Its square ripples sweep the whole
+screen every ~10 seconds, which is an event rather than texture; `operator-plain`
+is that look without them.
 
 The marker is `.live.` rather than `-live-` on purpose: enterthematrix watches
 for that other one, and with both installed it would turn its rain on alongside
@@ -448,7 +456,7 @@ but it helps to know what is what:
 | `qml/` | **product** | `MatrixRain.qml` and `BloomLevel.qml`, plus `Versions.js` |
 | `shaders/*.frag.qsb` | **product** | compiled; these are what load at runtime |
 | `assets/*_msdf.png` | **product** | one MSDF atlas per version, untouched from upstream |
-| `assets/matrix-rain.live.webp` | **product** | thumbnail + marker + static fallback |
+| `assets/backgrounds/*.live.webp` | **product** | thumbnail + marker + static fallback, one per version |
 | `provider.json` | **product** | what consumers read |
 | `LICENSE`, `LICENSE.rezmason` | **product** | ours and upstream's, both MIT |
 | `shaders/*.frag` | source | the GLSL the `.qsb` are built from |
