@@ -171,7 +171,8 @@ includes, and runs in place from then on.
 ## Licence
 
 MIT, see [`LICENSE`](LICENSE). Upstream's terms are in
-[`LICENSE.rezmason`](LICENSE.rezmason), also MIT. The fonts keep their own.
+[`LICENSE.rezmason`](LICENSE.rezmason), also MIT, and [`NOTICE`](NOTICE) records
+what derives from what. The fonts keep their own.
 
 ---
 

@@ -1,0 +1,13 @@
+matrix-rain
+Copyright (c) 2026 Leandro Lalanne
+
+This work derives from Rezmason/matrix (https://github.com/Rezmason/matrix),
+which is MIT licensed: the rain algorithm, the MSDF glyph atlases and the
+palettes are its work. Its licence is kept verbatim in LICENSE.rezmason and
+applies to those parts.
+
+Matrix-Code.ttf, and MatrixCodeTerminal.ttf which is derived from it by
+tools/make-terminal-font.py, keep whatever terms they were published under.
+
+This is an unpaid fan project. It is not affiliated with or endorsed by
+Warner Bros. or any other rights holder in The Matrix.
