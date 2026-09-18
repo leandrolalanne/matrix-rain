@@ -292,10 +292,16 @@ a column count — the relative density is preserved, so upstream's 40-column
 megacity works out to 18pt against classic's 9pt. `animationSpeed` is applied by
 scaling the time fed to the shader, which is what upstream does.
 
-`megacity` is the one version that does not take that translation. It is held at
-classic's 9pt: its glyph is a city seen from above, and at 18pt the grid reads as
-a handful of huge tiles instead of as rain. The conversion is still what tells
-you 18 is upstream's intent — this overrides it knowingly.
+Two versions do not take that translation, and are held at classic's 9pt
+instead. `megacity` would be 18pt, but its glyph is a city seen from above and at
+that size the grid reads as a handful of huge tiles rather than as rain.
+`operator` would be 6.7pt, which leaves its glyphs at 74% of classic's height
+and — with its own narrow 0.692 advance — 55% of its width: that reads as cramped
+rather than as dense. Its crowding comes from the advance, which is untouched, so
+the character survives the larger point size.
+
+The conversion still documents what upstream intended in both cases. These
+override it knowingly.
 
 ### The intro
 

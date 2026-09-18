@@ -57,8 +57,11 @@ var versions = {
     atlas: "matrixcode_msdf.png",
     glyphSequenceLength: 57,
     glyphTextureGridSize: [8, 8],
-    // 108 columns upstream: 9 * 80 / 108.
-    fontSize: 6.7,
+    // 108 columns upstream would be 9 * 80 / 108 = 6.7pt. Held at classic's 9,
+    // like megacity: at 6.7 the glyphs are 74% of classic's height and, with
+    // the narrow advance below, 55% of its width, which reads as cramped rather
+    // than as dense. The crowding is kept by `advance`, not by the point size.
+    fontSize: 9,
     // upstream's glyphHeightToWidth 1.35 makes the cell that much narrower
     // than the font's own advance would.
     advance: 0.692,
