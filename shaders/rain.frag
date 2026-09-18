@@ -34,7 +34,10 @@ layout(std140, binding = 0) uniform buf {
     float qt_Opacity;
 
     float iTime;
-    float numColumns;
+    // Modelo terminal: manda el tamaño de celda, no la cantidad de columnas.
+    // Agrandar la ventana suma columnas en vez de agrandar los glifos.
+    float cellHeight;
+    float cellAspect;
     float fallSpeed;
     float raindropLength;
     float baseContrast;
@@ -122,11 +125,11 @@ void main() {
     // que lo tiene abajo. Sin este flip la lluvia sube.
     vec2 uv = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y);
 
-    // Las CELDAS son cuadradas, no la grilla: numColumns va a lo ANCHO y las
-    // filas caen con el mismo paso. Se deriva aca en vez de recibirlo, asi un
-    // host que solo pasa iResolution no tiene que calcular nada.
-    float numRows = max(1.0, numColumns * iResolution.y / iResolution.x);
-    vec2 grid = vec2(numColumns, numRows);
+    // La grilla sale del tamaño de celda, como en una terminal: columnas y
+    // filas son cuantas ENTRAN. Puede quedar una celda parcial en los bordes,
+    // igual que en una terminal cuyo alto no es multiplo exacto de la linea.
+    vec2 cellPx = vec2(cellHeight * cellAspect, cellHeight);
+    vec2 grid = max(vec2(1.0), iResolution / cellPx);
     vec2 glyphPos = floor(uv * grid);
     vec2 screenPos = glyphPos / grid;
 

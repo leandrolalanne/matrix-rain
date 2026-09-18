@@ -76,6 +76,48 @@ cinco stops contra la conversion propia: coinciden exacto. No hay correccion
 de gamma en ningun lado, y la rampa interpola **lineal** (no smoothstep) con
 los extremos sostenidos.
 
+## Modelo de layout: terminal, no zoom
+
+Manda el **tamaño de celda**, no la cantidad de columnas. Agrandar la ventana
+hace entrar mas columnas; los glifos no cambian de tamaño. Bajar `cellHeight`
+es como bajar el cuerpo de la fuente en una terminal.
+
+```
+cellHeight 20, ventana 1280x720  ->  paso 25px,  36 filas x 69 columnas
+cellHeight 20, ventana  640x360  ->  paso 25px,  18 filas x 34 columnas
+```
+
+Mismo paso, distinta grilla. Eso es reflujo de terminal.
+
+**Es una divergencia deliberada de upstream.** Rezmason fija `numColumns: 80` y
+estira: al redimensionar hace zoom y nunca refluye. La idea de este port es que
+la lluvia se comporte como texto de verdad, que es de donde sale su
+autenticidad: en la pelicula el codigo esta en terminales.
+
+Como consecuencia, **las metricas de fidelidad contra Rezmason dejan de ser el
+objetivo** para todo lo que dependa de la grilla: a una ventana dada tenemos
+otra cantidad de columnas que el, por diseño. Lo que sigue siendo comparable es
+el color, el brillo y la forma de los glifos.
+
+### El ratio de celda
+
+`cellAspect` es 0.934, medido de las metricas reales de `Matrix-Code.ttf`
+(unitsPerEm 1024, alto de linea 1024, avance dominante 956). O sea lo que haria
+una terminal corriendo esa fuente.
+
+Ojo con dos alternativas que parecen razonables y no lo son:
+
+- **0.47**, que usa enter-the-matrix, es correcto para SU atlas de katakana
+  halfwidth sacado de `ttfx`. Aplicado a este atlas achata los glifos a la mitad.
+- Las metricas de **tu terminal** (JetBrainsMono y compañia, ~0.6) describen la
+  fuente de la terminal, no la de la pelicula.
+
+Los glifos del atlas estan dibujados cuadrados (41x43 px medios dentro de celdas
+de 64x64), asi que con 0.934 hay una compresion horizontal del 6.6%,
+imperceptible. `cellAspect = 1.0` la elimina a costa de una grilla un pelo mas
+ancha que la que daria la fuente.
+
+
 ## La cadena
 
 ```

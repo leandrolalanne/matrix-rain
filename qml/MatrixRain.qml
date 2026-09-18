@@ -21,14 +21,30 @@ Item {
   property int fps: 30
 
   // --- lluvia ---
-  property real numColumns: 80
+  //
+  // MODELO TERMINAL: manda el tamaño de celda, no la cantidad de columnas.
+  // Agrandar la ventana hace entrar MAS columnas en vez de agrandar los glifos,
+  // y bajar cellHeight es como bajar el cuerpo de la fuente en una terminal.
+  //
+  // (Upstream hace lo contrario: fija numColumns en 80 y estira. Al redimensionar
+  // hace zoom y nunca refluye. Esta es una divergencia deliberada.)
 
-  // Las CELDAS son cuadradas, no la grilla: upstream mapea numColumns a lo
-  // ANCHO y deja que las filas caigan con el mismo paso. Medido sobre una
-  // captura del original a 1920x1080: 24 px por fila, y 24 = 1920/80.
-  readonly property real numRows: width > 0 && height > 0
-    ? Math.max(1, numColumns * height / width)
-    : numColumns * 9 / 16
+  // Alto de celda en px logicos: el paso de linea. Es la unica perilla de tamaño.
+  property real cellHeight: 20
+
+  // Ancho / alto de la celda. 0.934 medido de las metricas reales de
+  // Matrix-Code.ttf: unitsPerEm 1024, alto de linea 1024, avance dominante 956.
+  // O sea lo que haria una terminal corriendo esa fuente.
+  //
+  // Ojo: el atlas MSDF normaliza cada glifo en una celda cuadrada de 64x64, asi
+  // que con 0.934 el dibujo queda comprimido un 6.6% horizontal. Es imperceptible,
+  // pero poner 1.0 lo deja sin distorsion a costa de una grilla un pelo mas ancha.
+  // (El 0.47 de enter-the-matrix es correcto para SU atlas de katakana halfwidth,
+  // no para este: aca achataria los glifos a la mitad.)
+  property real cellAspect: 0.934
+
+  readonly property real numColumns: width  > 0 ? Math.max(1, width  / (cellHeight * cellAspect)) : 1
+  readonly property real numRows:    height > 0 ? Math.max(1, height / cellHeight) : 1
 
   property real fallSpeed: 0.3
   property real raindropLength: 0.75
@@ -122,7 +138,8 @@ Item {
     fragmentShader: root.shaderDir + "rain.frag.qsb"
 
     property real iTime: root.elapsed
-    property real numColumns: root.numColumns
+    property real cellHeight: root.cellHeight
+    property real cellAspect: root.cellAspect
     property size iResolution: Qt.size(width, height)
     property real fallSpeed: root.fallSpeed
     property real raindropLength: root.raindropLength
