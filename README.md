@@ -56,6 +56,7 @@ dependency.
 ```bash
 enterthematrix --tty            # halfwidth katakana, one cell, any font
 enterthematrix --tty --font     # the codepoints Matrix-Code.ttf maps
+enterthematrix --tty --operator # the operator rhythm and density
 enterthematrix --tty --classic  # upstream's palette instead of the cool one
 ```
 
@@ -113,6 +114,23 @@ scaled.
 
 It is denser than `cmatrix` and friends, because it is the shader's brightness
 curve rather than a sparse random one.
+
+### The operator rhythm
+
+`--operator` carries over what makes that version what it is, taking the numbers
+from `qml/Versions.js` so the two renderers cannot drift: it falls at twice the
+speed with glyphs cycling a third as often, over a drop twice as long, and
+`brightnessOverride` pins every visible glyph to one brightness instead of
+letting it fade.
+
+Measured over the model, that last one is the visible difference: the spread of
+lit-cell brightness halves, 0.165 to 0.071. Flat, no gradient.
+
+No ripples. A terminal cell is too coarse for a one-cell band sweeping across,
+and it would only be on screen about 7% of the time. Everything else carries.
+
+What does not carry is the bloom, which is why the shader's operator reads far
+denser than this one. A terminal has no bloom to give.
 
 ### A different ramp
 

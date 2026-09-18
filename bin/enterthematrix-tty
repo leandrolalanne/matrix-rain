@@ -53,6 +53,19 @@ CURSORS = {"cold": (0.85, 1.0, 1.0), "classic": (0.7559, 1.0, 0.46)}
 PALETTE = PALETTES["cold"]
 CURSOR = CURSORS["cold"]
 
+# The same numbers qml/Versions.js declares. Ripples are not here: a terminal
+# cell is too coarse for a one-cell-thick band sweeping across, and it would
+# only show for about 7% of the time anyway. Everything else that makes
+# operator what it is -- the rhythm and the density -- carries over.
+VERSIONS = {
+    "classic":  dict(fall=0.3, length_scale=1.0, cycles=1.8, override=0.0),
+    # Falls at twice the speed with glyphs cycling a third as often: fast
+    # streams of stable characters. raindropLength 1.5 is twice classic's, so
+    # the drop is twice as long. brightnessOverride pins every visible glyph to
+    # one brightness instead of letting it fade, which is what floods the grid.
+    "operator": dict(fall=0.6, length_scale=2.0, cycles=0.6, override=0.22),
+}
+
 FALLBACK = "\"*+012345789:<>z|¦©ｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾖﾗﾘﾜｰ"
 
 # Every fullwidth katakana has a halfwidth twin, and Unicode records it as a
@@ -158,9 +171,12 @@ def palette(t):
 
 
 class Rain:
-    def __init__(self, cols, rows, use_font=False, fall=0.3, length=None,
-                 cycles=1.8, contrast=1.1, brightness=-0.5):
-        self.fall, self.cycles = fall, cycles
+    def __init__(self, cols, rows, use_font=False, version="classic",
+                 length=None, contrast=1.1, brightness=-0.5):
+        v = VERSIONS.get(version, VERSIONS["classic"])
+        self.fall, self.cycles = v["fall"], v["cycles"]
+        self.override = v["override"]
+        self.length_scale = v["length_scale"]
         self._length_fixed = length   # None means: scale it to the terminal
         self.length = length or 0.75
         self.contrast, self.brightness = contrast, brightness
@@ -187,7 +203,7 @@ class Rain:
         # instead of streaks. Scale it so one drop spans the window, as it does
         # there.
         if self._length_fixed is None:
-            self.length = 0.01 * max(8, rows)
+            self.length = 0.01 * max(8, rows) * self.length_scale
         # Per-column constants: the shader recomputes these per fragment, but
         # they only depend on x, so here they are hoisted out of the loop.
         self.off = [rand_float(x, 0.0)*1000.0 for x in range(cols)]
@@ -235,13 +251,18 @@ def run(rain, fps=20):
                 # One row lower ON SCREEN, which is row+1 here.
                 below = rain.brightness_at(x, y+1, t) if y+1 < rain.rows else 0.0
                 lit = b*rain.contrast + rain.brightness
+                is_head = b > below
+                # Where the shader does it too: after contrast and brightness,
+                # before anything else. Cursors keep their own brightness.
+                if rain.override > 0.0 and lit > 0.0 and not is_head:
+                    lit = rain.override
                 if lit <= 0.02:
                     if prev is not None:
                         buf.append("\x1b[0m"); prev = None
                     buf.append(" " * rain.cell_w)
                     continue
-                r, g, bl = CURSOR if b > below else palette(lit)
-                col = (int(r*255*min(1, lit*2 if b > below else 1)),
+                r, g, bl = CURSOR if is_head else palette(lit)
+                col = (int(r*255*min(1, lit*2 if is_head else 1)),
                        int(g*255), int(bl*255))
                 if col != prev:
                     buf.append("\x1b[38;2;%d;%d;%dm" % col); prev = col
@@ -259,6 +280,7 @@ USAGE = """the rain, in the terminal
   enterthematrix --tty            halfwidth katakana, one cell, any font
   enterthematrix --tty --font     the codepoints Matrix-Code.ttf maps, in a
                                   terminal opened with that font
+  enterthematrix --tty --operator the operator rhythm and density, no ripples
   enterthematrix --tty --classic  upstream's palette instead of the cool one
 
   MATRIX_FPS=30 to change the frame rate. Any key quits.
@@ -271,12 +293,13 @@ def main():
         print(USAGE); return
     use_font = "--font" in args
     use_palette("classic" if "--classic" in args else "cold")
+    version = "operator" if "--operator" in args else "classic"
     if not sys.stdout.isatty():
         sys.exit("enterthematrix-tty: needs a terminal")
     fd = sys.stdin.fileno()
     saved = termios.tcgetattr(fd)
     cols, rows = os.get_terminal_size()
-    rain = Rain(cols, rows, use_font=use_font)
+    rain = Rain(cols, rows, use_font=use_font, version=version)
 
     def on_resize(*_):
         c, r = os.get_terminal_size()
