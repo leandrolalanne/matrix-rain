@@ -1,138 +1,117 @@
-# omarchy-matrix-rain
+# matrix-rain
 
-The Matrix digital rain from [Rezmason/matrix](https://github.com/Rezmason/matrix),
-ported to a native Qt Quick shader so it can run as a desktop background without
-paying for a browser.
+The digital rain from *The Matrix*, running natively on Linux — on your desktop,
+and inside the terminal you are already typing in.
 
-**Status: four versions, ripples and the intro working. Not yet packaged as a plugin.**
+```bash
+matrix      # the rain on the GPU, with bloom and the intro
+redpill     # the same rain, in this terminal, with the film's own glyphs
+```
+
+## What it is
+
+Not a rain effect that looks vaguely like the film. Every number in it —
+fall speed, glyph cycling rate, drop length, the colour ramp, the bloom — comes
+from [Rezmason/matrix](https://github.com/Rezmason/matrix), the reconstruction
+that worked the details out from the films themselves, down to the glyph shapes
+and the fact that the code is **mirrored**.
+
+This project ports that to a native Qt Quick shader and to a terminal renderer:
+no browser in the picture, and one command to run it.
+
+Five versions, each with its own atlas and parameters:
+
+| | |
+|---|---|
+| `classic` | The code everyone knows, from the sequels' opening titles. |
+| `resurrections` | The updated code from *Matrix Resurrections*. |
+| `operator-plain` | The first film's titles and the operators' screens: flatter, crowded, no gradient. |
+| `operator` | The same, with the square ripples sweeping across it. |
+| `megacity` | The classic code with the Megacity as a glyph, from *Revolutions*. |
+
+## Credits, and what this is not
+
+The rain algorithm, the MSDF glyph atlases and the palettes are
+[Rezmason/matrix](https://github.com/Rezmason/matrix), MIT — years of research
+that this project only re-renders. If you find this beautiful, the beauty is
+upstream's. See [`LICENSE.rezmason`](LICENSE.rezmason).
+
+The finding that Qt's `FrameAnimation` is required — with a `Timer` the clock
+advances but the `ShaderEffect` never repaints — comes from tymurbogach's
+[enterthematrix](https://github.com/tymurbogach/omarchy-enterthematrix-theme)
+theme, which hit the same wall first.
+
+> This is an **unpaid fan project**, released free under MIT. It sells nothing
+> and claims no rights over anything it references. It is not affiliated with or
+> endorsed by Warner Bros. or anyone else who owns a piece of *The Matrix*. If a
+> rights holder would rather it did not exist, say so and it comes down.
 
 ## Install
 
 ```bash
-git clone https://github.com/<you>/omarchy-matrix-rain
-cd omarchy-matrix-rain
+git clone https://github.com/<you>/matrix-rain
+cd matrix-rain
 ./install.sh
 ```
 
-Then, from any shell:
+You need **Qt 6 Declarative** (for `qml6`) and a GPU that does OpenGL. On Arch
+that is `sudo pacman -S qt6-declarative`; every distro ships it under some name.
+The terminal version needs nothing but Python 3 from the standard library.
+
+No distro, desktop or window manager is assumed: it is a plain Qt Quick
+application plus a Python script.
+
+Everything lands under your home, no `sudo`, in the XDG layout:
+
+| | |
+|---|---|
+| `~/.local/share/matrix-rain` | the app |
+| `~/.local/bin/matrix`, `~/.local/bin/redpill` | the commands |
+| `~/.local/share/fonts/` | the film's font, and a derived one for terminals |
+
+`./install.sh --link` symlinks the source tree instead of copying, so edits are
+live. `./uninstall.sh` undoes either, and never follows the link when removing.
+
+## On the desktop
 
 ```bash
 matrix                 # classic, arriving from a blank screen
 matrix operator        # start on a specific version
 matrix list            # what is available
-
-redpill                # the same rain, in the terminal you typed in
 ```
 
-It opens as a normal window where you are, not as a fullscreen takeover. Super+F
-fullscreens it if you want that.
+It opens as a normal window where you are, not as a fullscreen takeover.
+Super+F fullscreens it if you want that.
 
-The intro plays **once, on launch**, into `classic`. While it runs: `v` next
-version (no intro — switching is not a fresh entry), `i` replay the intro, `f`
-fps, `h` hint, `q` quit.
-
-Switching prints the version's name for a couple of seconds and then lets it
-fade. The cycle order is `classic → resurrections → operator-plain → operator
-→ megacity`, declared once in `qml/Versions.js` and mirrored in
-`provider.json`.
-
-It needs **qt6-declarative** (for `qml6`) and a GPU that does OpenGL. Nothing else.
-
-`install.sh` copies the app to `~/.local/share/matrix-rain` and links the command
-into `~/.local/bin`, the XDG layout. `./install.sh --link` symlinks the source
-tree instead, so edits are live — useful while developing. `./uninstall.sh`
-undoes either, and never follows the link when removing.
-
-This works outside Omarchy: it is a plain Qt Quick application with no Omarchy
-dependency.
-
-> Two commands, named for what they do rather than for a mode flag. `matrix` is
-> the rain as the film renders it, on the GPU. `redpill` is the choice to see the
-> code itself, in the terminal you are already in — no window, no font to set up,
-> nothing to configure. There is also an unrelated Omarchy theme
-> called [Enter the Matrix](https://github.com/tymurbogach/omarchy-enterthematrix-theme),
-> whose own command is `omarchy-matrix`. This one credits that theme below for a
-> finding it published first.
-
+The intro plays **once, on launch**. While it runs: `v` next version, `i` replay
+the intro, `f` fps, `h` hint, `q` quit. Switching shows the version's name for a
+couple of seconds and lets it fade.
 
 ## In the terminal
 
 ```bash
-redpill                 # the film's own glyphs, right here
-redpill operator        # the operator rhythm and density
-redpill plain           # one cell per glyph, any font, never a window
+redpill                # the film's own glyphs, right here
+redpill operator       # the operator rhythm and density
+redpill plain          # one cell per glyph, any font, never a window
 ```
 
 `MATRIX_FPS`, `MATRIX_PALETTE=classic` and `MATRIX_FONT_SIZE` tune it. There are
-no flags: which glyphs are reachable is something the launcher works out, not
-something you should have to say.
+no flags: which glyphs your terminal can reach is something the launcher works
+out, not something you should have to say.
 
-Pure stdlib Python, no window. **The same field as the shader**:
-`getRainBrightness` is ported verbatim from `shaders/rain.frag`, wobble and all,
-so a column falls here exactly as it falls there. What changes is the renderer —
-character cells instead of MSDF glyphs, and no bloom, because a terminal has
-neither.
+It is **the same rain**, not a lookalike: the brightness function is ported
+line for line from the shader, so a column falls here exactly as it falls there.
+What changes is the drawing — character cells instead of glyphs, and no bloom,
+because a terminal has none to give.
 
-### Three glyph modes
+### Getting the film's glyphs in your own window
 
-The glyph set is read from **Matrix-Code.ttf's own cmap**: 58 codepoints, 34 of
-them katakana plus digits and symbols. The font is parsed at runtime if it is in
-`~/Downloads` or installed; otherwise a baked-in copy of the set is used.
-
-The catch is that the font's katakana are **fullwidth**. A terminal reserves two
-cells for those (Unicode decides that, not the font) while every glyph in
-Matrix-Code has the same 0.934 em advance, about one cell.
-
-| | glyphs | cells | font |
-|---|---|---|---|
-| default | 56, katakana folded to their halfwidth twins | 1 | any |
-| `--font`, in place | 56, moved to plane 16 | 2 | `Matrix Code Terminal` in the chain |
-| `--font`, in a window | 56, the font's own codepoints | 2 | `Matrix-Code` as the primary |
-
-So: a tight grid with near-identical shapes from any font, or the film's exact
-glyphs in double-width cells. The font has no halfwidth katakana at all, so
-there is no third option.
-
-`--font` only means anything if the terminal is actually using Matrix-Code, and
-**a program cannot change the font of the terminal it was typed into**. Ghostty's
-`set_font_size` is a keybind action, not an escape sequence, and it does not
-implement xterm's OSC 50; the others are the same. There is no channel for it.
-
-So `--font` checks first, and takes whichever path is open:
-
-- **the terminal resolves `Matrix Code Terminal`** — it runs right here, in the
-  window you typed in, the way `cmatrix` does, asking for the plane 16 codepoints.
-- **it resolves `Matrix-Code` itself** — it runs here too, with the font's own
-  codepoints.
-- **neither** — it opens one that does, ghostty, foot, alacritty or kitty,
-  whichever is there, the way Omarchy's own screensaver does. That terminal opens
-  at **9 pt**, the same default the shader uses, so both renderers start at the
-  same size. `MATRIX_FONT_SIZE` changes it.
-
-`install.sh` puts the font in `~/.local/share/fonts`, and `uninstall.sh` takes it
-back out.
-
-### Running it in place
-
-Most terminals take a **list** of fonts and fall through to the next one for
-codepoints the first does not map, so adding Matrix-Code to that list would
-work. It would also be a trap. Matrix-Code maps real characters — digits, `:`,
-`|`, `<`, `>` — and a chain entry for it hands those to **every window of that
-terminal, forever**. Your prompt would start wearing the film's digits.
-
-So the font is moved out of the way instead. `tools/make-terminal-font.py`
-derives `MatrixCodeTerminal.ttf`, a copy of the same outlines whose every glyph
-sits at `0x100000 + its original codepoint`, in **plane 16**, the Supplementary
-Private Use Area-B. Only the `cmap` and `name` tables differ; `glyf`, `loca` and
-`hmtx` are the original's bytes.
-
-Plane 16 is empty by construction. Nerd Fonts stop at plane 15, no text a person
-reads is there, and `fc-list ':charset=100000'` returns that font and nothing
-else. So the chain entry is **inert**: it can never be reached except by a
-renderer that asks for those codepoints on purpose.
+A program cannot change the font of the terminal it was typed into. So by
+default `redpill` opens a window that has the font. To have it run **in place**,
+like `cmatrix`, add one line to your terminal's config:
 
 ```ini
-# ~/.config/ghostty/config      (reload with ctrl+shift+, or open a new window)
+# ~/.config/ghostty/config     (reload with ctrl+shift+, or open a new window)
 font-family = "Matrix Code Terminal"
 ```
 
@@ -146,438 +125,20 @@ font=JetBrainsMono Nerd Font:size=9, Matrix Code Terminal:size=9
 symbol_map U+100000-U+10FFFD Matrix Code Terminal
 ```
 
-Then `redpill` runs in the window you typed in. It stays
-**opt-in**: `install.sh` puts the font in place and prints the line, but never
-edits a terminal config. That file belongs to the user.
-
-The glyphs are still padded to two cells. A plane 16 codepoint is East Asian
-Width **Ambiguous**, so a terminal gives it one cell, and one cell of an ordinary
-coding font (JetBrainsMono advances 0.6 em) is narrower than these 0.934 em
-glyphs — measured, they collide and smear. Padded, they sit at 1.2 em with the
-glyph filling 78% of its box, which is **tighter than the window mode**, where
-Matrix-Code is the primary font and its fullwidth katakana get two 0.934 em cells
-for a 50% fill.
-
-The launcher works out which terminal it is in from `TERM_PROGRAM`,
-`KITTY_WINDOW_ID` or `ALACRITTY_WINDOW_ID`, and failing that by walking up the
-process tree comparing binary names (foot exports nothing of its own and its
-`term=` can be renamed). It reads that terminal's config, and the files the
-config includes, for the font in the chain. When it has to open a window instead,
-it prints the one line you would add to avoid that.
-
-Note that at two cells per column the glyph, whose advance is 0.934 em, fills
-about half of its box. The columns end up spaced by roughly one glyph width.
-That is the cost of using the font's own codepoints, and it is why the default
-mode exists.
-
-Padding matters here: the set mixes the font's fullwidth katakana with narrow
-digits and symbols, and printing a narrow one advances a single cell, sliding
-every column after it on that row. Each glyph is padded to the same width.
-
-### One thing that had to change
-
-`raindropLength` is scaled to the window instead of being fixed at upstream's
-0.75. That value is a 75-row period, which is right for the shader — 1080p at
-9pt is 72 rows, so one drop fills the screen. A terminal is half that tall, and
-a fixed 0.75 shows less than half a drop: the rain reads as blocks rather than
-streaks. Measured, the on-screen brightness span went from 0.36 to 0.99 once it
-scaled.
-
-It is denser than `cmatrix` and friends, because it is the shader's brightness
-curve rather than a sparse random one.
-
-### The operator rhythm
-
-`--operator` carries over what makes that version what it is, taking the numbers
-from `qml/Versions.js` so the two renderers cannot drift: it falls at twice the
-speed with glyphs cycling a third as often, over a drop twice as long, and
-`brightnessOverride` pins every visible glyph to one brightness instead of
-letting it fade.
-
-Measured over the model, that last one is the visible difference: the spread of
-lit-cell brightness halves, 0.165 to 0.071. Flat, no gradient.
-
-No ripples. A terminal cell is too coarse for a one-cell band sweeping across,
-and it would only be on screen about 7% of the time. Everything else carries.
-
-What does not carry is the bloom, which is why the shader's operator reads far
-denser than this one. A terminal has no bloom to give.
-
-### A different ramp
-
-The shader reproduces upstream's `classic` palette faithfully, and its blue
-channel sits below its red at every stop. On a screen that is the film's green;
-on a terminal's coarser cells it reads olive.
-
-So the terminal defaults to a cooler ramp: hue climbs 146 to 180 as brightness
-rises and blue stays above red throughout, so it runs green into a bluish white
-and never goes olive. Measured over lit cells, blue/red goes from 0.64 to 2.56.
-
-`--classic` gives you upstream's, unchanged.
-
-
-## Developing
-
-```bash
-tools/build-shaders.sh      # compile shaders/*.frag to .qsb (only if you edit a .frag)
-tools/preview.sh            # preview in a window
-tools/preview.sh --both     # the port and Rezmason side by side
-qml6 dev/main.qml           # same as preview.sh, directly
-```
-
-In the preview: `v` cycles the version, `i` replays the intro, `+`/`-` change the
-point size, `a` cycles the cell advance, `f` toggles 30/60 fps, `h` hides the
-overlay. Resize the window to watch it reflow. Super+F fullscreens.
-
-## Why this exists
-
-Running the real Rezmason in a WebKit layer-shell surface works, but it costs
-**~880 MB of RAM and ~35% of one core** with two monitors: a full WebKit process
-per screen. A native `ShaderEffect` runs inside the Quickshell process that is
-already there and adds none.
-
-## What makes the port possible
-
-Upstream runs four ping-pong buffers in half float (intro, raindrop, symbol,
-effect) and chains `rain -> bloom -> palette -> quilt`. That looks impossible to
-reproduce in a single pass, but **for the `classic` version none of that state is
-needed**, and you can prove it from the defaults:
-
-| Default | Value | Consequence |
-|---|---|---|
-| `brightnessDecay` | `1.0` | `mix(previous, new, 1.0)` discards the previous frame |
-| `skipIntro` | `true` | the intro returns a constant `2.0`, so `max(0, 1 - a*5)` is 0 |
-| `rippleTypeName` | `null` | `multipliedEffects=1`, `addedEffects=0`: a no-op |
-| `classic` | `{}` | overrides none of the above |
-
-What remains is a pure function of (column, row, time).
-
-### Glyph cycling, in closed form
-
-This is the only genuinely stateful part: `age` accumulates per frame and picks a
-new symbol when it crosses 1.0. But the switch times are knowable:
-
-```
-k      = floor(age0 + cyclesPerSecond * t)
-t_k    = (k - age0) / cyclesPerSecond
-symbol = floor(glyphSequenceLength * randomFloat(screenPos + t_k))
-```
-
-This is not an approximation — it yields the same result. The one deliberate
-difference is that upstream advances per **frame** (so its cycling speed depends
-on the refresh rate); here it is fixed in seconds.
-
-## Versions
-
-```qml
-MatrixRain { version: "classic" }       // or "operator", "megacity", "resurrections"
-MatrixRain { skipIntro: false }         // the rain arrives onto a blank screen
-```
-
-| Version | What it is |
-|---|---|
-| `classic` | The code everyone knows, from the sequels' opening titles. |
-| `operator-plain` | The first film's titles and the operators' screens: flatter, crowded, no gradient. |
-| `operator` | The same, with the square ripples sweeping across it. |
-| `megacity` | The classic code with the Megacity as a glyph, from *Revolutions*. |
-| `resurrections` | The updated code from *Matrix Resurrections*. |
-
-Each version is an atlas plus a parameter bundle; `qml/Versions.js` holds them
-and every value stays individually overridable from outside. `operator-plain` is
-derived from `operator` rather than copied, so the two cannot drift apart.
-
-Two upstream keys are translated rather than copied. `numColumns` becomes
-`fontSize`, because this port sizes by point like a terminal instead of pinning
-a column count — the relative density is preserved, so upstream's 40-column
-megacity works out to 18pt against classic's 9pt. `animationSpeed` is applied by
-scaling the time fed to the shader, which is what upstream does.
-
-Two versions do not take that translation, and are held at classic's 9pt
-instead. `megacity` would be 18pt, but its glyph is a city seen from above and at
-that size the grid reads as a handful of huge tiles rather than as rain.
-`operator` would be 6.7pt, which leaves its glyphs at 74% of classic's height
-and — with its own narrow 0.692 advance — 55% of its width: that reads as cramped
-rather than as dense. Its crowding comes from the advance, which is untouched, so
-the character survives the larger point size.
-
-The conversion still documents what upstream intended in both cases. These
-override it knowingly.
-
-### The intro
-
-`skipIntro: false` plays the opening: the rain arrives onto a blank screen one
-column at a time, with two columns deliberately starting early.
-
-Upstream keeps this in a ping-pong buffer with a latch — once a cell is
-`activated` it stays activated. **The latch is redundant**: `introTime` is
-strictly increasing in `simTime`, so once it crosses it never comes back. It
-resolves in closed form and needs no state, like the rest of the rain.
-
-### Ripples
-
-`operator` has the square ripples that sweep across the grid. Upstream keeps
-them in a fourth ping-pong buffer, but **its effect shader never reads the
-previous state** — `getRipple` is a pure function of `(time, position)` — so
-they live in the rain shader here and need no buffer.
-
-`operator-plain` exists for when you want that look without them.
-
-They are on screen about **7% of the time**: the band crosses the visible area
-during the first 2/30 of each ~10 second cycle. Worth knowing before concluding
-they are broken, which is exactly the mistake four random captures produced here
-before the visible windows were computed rather than guessed.
-
-`operator` also uses `brightnessOverride`, which pins every visible glyph to one
-brightness instead of letting it fade with the raindrop. That is what flattens
-it: measured against classic, mean green goes 0.111 -> 0.259 and the near-black
-fraction goes 0.582 -> 0.080.
-
-It is also the only version so far with a cell narrower than the font's own
-advance: upstream's `glyphHeightToWidth: 1.35` becomes `advance: 0.692` here
-(0.934 / 1.35), which is what crowds it.
-
-
-### What is not here, and why
-
-| | |
-|---|---|
-| `paradise` | ripples plus `brightnessDecay` and polar space, and it sits on the speculative *Variants* list. |
-| `3d`, `trinity`, `morpheus`, `bugs`, `holoplay` | **volumetric.** Upstream draws one quad per glyph (trinity is 3600 of them, each placed in perspective). A single fullscreen `ShaderEffect` cannot express that: `GridMesh` gives a *connected* grid, so neighbouring quads share vertices and cannot move independently in depth. It would need custom C++ geometry — which kills the install-with-one-command story — or a raymarched reimplementation, which is no longer a port. |
-| `mirror` | needs a webcam and click interaction. |
-| `nightmare` | `brightnessDecay: 0.75` is the one parameter that genuinely needs per-frame state. Approximable with a short FIR, not attempted. |
-| the *Variants* list | speculative, not wanted. |
-
-
-## What each file is for
-
-`omarchy plugin add` clones the **whole** repo onto every user's machine, so
-everything here gets installed. Nothing is redundant, but it helps to know what
-is what:
-
-| | | |
-|---|---|---|
-| `qml/` | **product** | `MatrixRain.qml` and `BloomLevel.qml`, plus `Versions.js` |
-| `shaders/*.frag.qsb` | **product** | compiled; these are what load at runtime |
-| `assets/*_msdf.png` | **product** | one MSDF atlas per version, untouched from upstream |
-| `assets/matrix-rain.live.webp` | **product** | thumbnail + marker + static fallback |
-| `provider.json` | **product** | what consumers read |
-| `LICENSE`, `LICENSE.rezmason` | **product** | ours and upstream's, both MIT |
-| `shaders/*.frag` | source | the GLSL the `.qsb` are built from |
-| `tools/build-shaders.sh` | source | compiles them; only needed if you edit a `.frag` |
-| `tools/make-marker.sh` | source | regenerates the marker offscreen |
-| `qml/Main.qml` | **product** | the app `matrix` runs |
-| `install.sh`, `uninstall.sh`, `bin/` | **product** | the install |
-| `bin/redpill-render` | **product** | the terminal renderer |
-| `dev/` | development | `main.qml` is the preview, `grab.qml` captures without a screen |
-| `tools/preview.sh` | development | opens the preview, and the reference beside it |
-| `tools/COMPARISON.md` | development | how to measure against the reference without measuring wrong |
-
-The `.qsb` files are committed on purpose even though they are build artifacts:
-whoever installs the plugin is not going to run `qsb`.
-
-The marker is WebP rather than PNG because over green noise it is 76% smaller
-while being visually indistinguishable, and it used to be 94% of the repo.
-
-## Layout model: terminal, not zoom
-
-Size is configured **in points**, like a terminal. The cell comes from the font
-metrics and the column count is however many fit.
-
-```qml
-fontSize: 9               // the only size knob
-fontLineHeightEm: 1.000   // Matrix-Code.ttf: ascent 960 - descent(-64) + lineGap 0, over upm 1024
-fontAdvanceEm:    0.934   // dominant advance 956 over upm 1024
-```
-
-A terminal **does not scale with the window, it scales with DPI**:
-
-- Resize the window -> the cell count changes, the glyph does not move.
-- Move it to another monitor -> same apparent size, different column count.
-
-Qt's logical pixels are already the DPI-independent unit, so converting points to
-logical pixels at 96 DPI is enough. Verified:
-
-```
-window 1280x720  ->  25px pitch,  36 rows x 69 columns
-window  640x360  ->  25px pitch,  18 rows x 34 columns
-```
-
-Same pitch, different grid. That is terminal reflow.
-
-| font-size | cell | grid at 1536x864 logical |
-|---|---|---|
-| **9 pt** | 12.0 x 11.2 px | **137 x 72** |
-| 12 pt | 16.0 x 14.9 px | 103 x 54 |
-| 15 pt | 20.0 x 18.7 px | 82 x 43 |
-
-**This is a deliberate divergence from upstream.** Rezmason pins
-`numColumns: 80` and stretches: resizing zooms and never reflows. The point of
-this port is for the rain to behave like real text, which is where its
-authenticity comes from — in the film the code is on terminals.
-
-As a consequence, **fidelity metrics against Rezmason stop being the target** for
-anything grid-dependent: at a given window size we have a different column count
-than upstream, by design. Color, brightness and glyph shape remain comparable.
-
-### The font advance
-
-`fontAdvanceEm` is 0.934, parsed out of the TTF. The resulting cell is what a
-terminal running that font would use.
-
-Two alternatives look reasonable and are not:
-
-- **0.47**, which enterthematrix uses, is correct for *its* atlas of halfwidth
-  katakana taken from `ttfx`. Applied to this atlas it squashes glyphs by half.
-- **Your terminal's metrics** (JetBrainsMono and friends, ~0.6) describe the
-  terminal's font, not the film's.
-
-The atlas glyphs are drawn square (41x43 px average inside 64x64 cells), so 0.934
-compresses them horizontally by 6.6%, which is imperceptible. Setting
-`fontAdvanceEm` equal to `fontLineHeightEm` removes it at the cost of a slightly
-wider grid than the font would give.
-
-## The chain
-
-```
-rain -> 5-level pyramid (high-pass -> blur H -> blur V) -> combine -> palette
-```
-
-Bloom is not composited over the color: it is **added to brightness before the
-ramp is sampled** (`brightness = primary + bloom`), so a bright glyph does not
-just gain a halo, it climbs the palette.
-
-Each pyramid level high-passes the previous level's high-pass output, and the
-downsampling is done by the `ShaderEffectSource` rendering into a smaller
-texture. One upstream detail that reads like a bug and is not: `bloomPass.js`
-passes `height: viewportWidth` and `width: viewportHeight`, swapped. With the
-swap the offset works out to exactly one texel, which is what gets passed
-directly here.
-
-## Fidelity
-
-Measured against the reference at equal size (1600x900), **both offscreen**: the
-port via `Item.grabToImage()` and Rezmason via `chromium --headless=new
---screenshot`. No windows and no window manager involved, so it reproduces. See
-`tools/COMPARISON.md`.
-
-| metric | reference | port | delta |
-|---|---|---|---|
-| color balance R/G | 0.3825 | 0.3843 | **+0.5%** |
-| color balance B/G | 0.2422 | 0.2404 | **-0.7%** |
-| peak brightness (p99) | 0.9333 | 0.9569 | +2.5% |
-| mean brightness | 0.1213 | 0.1126 | **-7.2%** |
-| near-black fraction | 0.5634 | 0.6082 | +8.0% |
-
-Color and geometry are essentially nailed. What remains is ~7% less mean
-brightness and 8% more pure black: the reference has a faint glow spread
-everywhere that the port lacks. With ~5% frame-to-frame variance, that sits just
-above the noise.
-
-### What it was not
-
-For a while the gap looked like -28%, and it was attributed to upstream's
-`resolution: 0.75` default — it renders the canvas at 75% and lets the browser
-scale it up, softening the glyphs.
-
-**Measured, that hypothesis is false.** Applying 0.75 makes everything worse:
-
-| | mean | color R/G | color B/G |
-|---|---|---|---|
-| `resolution 1.00` | -7.2% | +0.5% | -0.7% |
-| `resolution 0.75` | -15.3% | -6.2% | -13.4% |
-
-The reasoning was sound; what was wrong is **where** the scaling lands. Upstream
-runs the entire chain at that fraction and the browser scales the **final image**
-(`canvas.width = clientWidth * dpr * resolution`, with the canvas stretched by
-CSS). Here only the rain texture is reduced and the palette still runs at full
-resolution, so the scaling falls *before* the color mapping instead of after: it
-loses glyph coverage ahead of the ramp rather than softening the final color.
-
-That is why `resolution` sits at `1.0` and is a performance knob, not a fidelity
-one. For 0.75 to be faithful you would have to wrap the whole chain (palette
-included) in a `ShaderEffectSource` and scale only the output.
-
-Much of the original -28% was not real either: it came from comparing window
-captures of differing sizes, before there was a deterministic measurement.
-
-## Provider and machinery
-
-This repo is **only the provider**: shaders, atlas, palette and marker. Whatever
-mounts them somewhere — a Quickshell plugin, a wallpaper daemon, a theme
-installer — lives outside and reads `provider.json`.
-
-The split is deliberate, borrowed from the
-[enterthematrix](https://github.com/tymurbogach/omarchy-enterthematrix-theme)
-theme: a second provider (another rain, another effect) should not force a single
-line of the machinery to change.
-
-```
-omarchy-matrix-rain     <- this repo: the effect
-  provider.json           declares shaders, atlas, palette, marker, defaults
-  shaders/  assets/  qml/
-
-omarchy-matrix-theme    <- consumer: a structure assembled LATER, out of
-                           whatever comes from here (screensaver, background, art)
-```
-
-### Possible hosts
-
-| Host | Multipass | What runs |
-|---|---|---|
-| Quickshell (`ShaderEffect`) | yes | the full chain, with bloom |
-| hyprglaze, shaderbg, neowall, wallrs | no | `rain` only (no bloom) |
-| Shadertoy | yes (buffers) | the full chain |
-
-That is why the uniforms use Shadertoy's names (`iTime`, `iResolution`): the same
-shader runs everywhere, and a host without multipass uses the `rain` stage alone.
-You lose the bloom, not the rain.
-
-### How it gets selected as a background in Omarchy
-
-`assets/matrix-rain.live.webp` does three jobs at once:
-
-1. it is the **thumbnail** in the background switcher,
-2. selecting it is what **turns on** the live rain — the consumer watches the
-   current background's name for the `.live.` marker,
-3. if nothing is running, it is what you see: a decent **static background**.
-
-It goes in `~/.config/omarchy/backgrounds/<slug>/`, which Omarchy lists before
-the theme's own (`omarchy-theme-bg-next` sorts by path, and `.config` < `.local`).
-
-The marker is `.live.` rather than `-live-` on purpose: enterthematrix watches
-for that other one, and with both installed it would turn its rain on alongside
-ours.
-
-## Known limitation: the clock
-
-`elapsed` grows without bound and the uniform is float32. After an hour
-`rainTime` is around 1400 and the resolution is ~1e-4 against a per-frame step of
-~0.0067, or 65 levels: invisible. Near 24 hours `rainTime` is around 35000, the
-resolution drops to ~0.002 and about 3 levels per step remain: that is where the
-fall starts to judder.
-
-This cannot be fixed by wrapping the clock the way the enterthematrix theme
-does, because `wobble` uses irrational frequencies (`sin(sqrt(2)x)`,
-`sin(sqrt(5)x)`) precisely so the field never repeats, which leaves the clock no
-clean wrap point. The ways out are giving up `wobble`, accepting a jump every so
-many hours, or emulating double precision in the accumulator.
-
-## Still to do
-
-- Package it as a Quickshell plugin (`manifest.json` + `Service.qml` on a
-  layer-shell surface).
-- Steal the two things enterthematrix does better: `WlrLayer.Bottom` instead of
-  `Background`, and freezing the render when a window covers the desktop on
-  battery — which matters more here, at 18 passes per frame.
-- Measure the actual GPU cost, which is still unmeasured.
-
-## Credits and license
-
-The rain algorithm, the MSDF atlas (`assets/matrixcode_msdf.png`) and the palette
-come from [Rezmason/matrix](https://github.com/Rezmason/matrix), MIT. See
-`LICENSE.rezmason`. This port is MIT as well, see `LICENSE`.
-
-The finding that `FrameAnimation` is required (with a `Timer` the clock advances
-but the `ShaderEffect` never repaints) comes from tymurbogach's
-[enterthematrix](https://github.com/tymurbogach/omarchy-enterthematrix-theme)
-theme, which solved the same problem first.
+That font is **inert by design**. It is a derived copy whose glyphs live in
+Unicode plane 16, a private area nothing else on a system uses, so it can sit in
+your font chain forever without ever supplying a character you might type. The
+film's font itself is not used for this, precisely because it *does* map real
+digits and punctuation. `redpill` detects the line and runs in place from then
+on.
+
+## Licence
+
+MIT, see [`LICENSE`](LICENSE). Upstream's terms are in
+[`LICENSE.rezmason`](LICENSE.rezmason), also MIT. The fonts keep their own.
+
+---
+
+How it was built — the single-pass derivation, the terminal layout model, the
+fidelity measurements against upstream, and what was deliberately left out — is
+in [`docs/PORTING.md`](docs/PORTING.md).
