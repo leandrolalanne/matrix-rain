@@ -29,7 +29,31 @@ versions() {
 case "${1:-}" in
   -h|--help) sed -n '2,9p' "$SELF" | sed 's/^# \{0,1\}//'; exit 0 ;;
   --list)    versions | sed 's/^/  /'; exit 0 ;;
-  --tty)     shift; exec "$ROOT/bin/enterthematrix-tty" "$@" ;;
+  --tty)
+    shift
+    # --font only means anything if the terminal is actually using Matrix-Code,
+    # and we cannot change the font of the terminal we were typed into. So open
+    # one that has it, the way Omarchy's own screensaver does. MATRIX_IN_TERM
+    # stops the spawned instance from spawning another.
+    if [[ " $* " == *" --font "* && -z ${MATRIX_IN_TERM:-} ]]; then
+      size="${MATRIX_FONT_SIZE:-14}"
+      for t in ghostty foot alacritty kitty; do
+        command -v "$t" >/dev/null || continue
+        case $t in
+          ghostty)   exec env MATRIX_IN_TERM=1 ghostty --font-family="Matrix-Code" --font-size="$size" \
+                       -e "$ROOT/bin/enterthematrix-tty" "$@" ;;
+          foot)      exec env MATRIX_IN_TERM=1 foot --font="Matrix-Code:size=$size" \
+                       -e "$ROOT/bin/enterthematrix-tty" "$@" ;;
+          alacritty) exec env MATRIX_IN_TERM=1 alacritty -o "font.normal.family=Matrix-Code" \
+                       -o "font.size=$size" -e "$ROOT/bin/enterthematrix-tty" "$@" ;;
+          kitty)     exec env MATRIX_IN_TERM=1 kitty -o font_family="Matrix-Code" \
+                       -o font_size="$size" "$ROOT/bin/enterthematrix-tty" "$@" ;;
+        esac
+      done
+      echo "enterthematrix: no ghostty, foot, alacritty or kitty to open with the font." >&2
+      echo "Running here instead; set Matrix-Code as your terminal font to see it." >&2
+    fi
+    exec "$ROOT/bin/enterthematrix-tty" "$@" ;;
 esac
 
 command -v qml6 >/dev/null || {

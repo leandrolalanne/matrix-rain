@@ -13,4 +13,8 @@ removed=0
 if [[ -L $SHARE ]]; then rm -f "$SHARE"; echo "removed $SHARE (was a link)"; removed=1
 elif [[ -d $SHARE ]]; then rm -rf "$SHARE"; echo "removed $SHARE"; removed=1; fi
 
+FONT="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/Matrix-Code.ttf"
+[[ -e $FONT ]] && { rm -f "$FONT"; command -v fc-cache >/dev/null && fc-cache -f "$(dirname "$FONT")" >/dev/null 2>&1
+                    echo "removed $FONT"; removed=1; }
+
 (( removed )) || echo "nothing to remove"

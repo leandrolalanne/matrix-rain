@@ -142,6 +142,14 @@ class Rain:
         self.length = length or 0.75
         self.contrast, self.brightness = contrast, brightness
         self.glyphs, self.cell_w = glyph_set(use_font)
+        # In --font mode a rain column is two terminal cells, but the set mixes
+        # the font's fullwidth katakana with narrow digits and symbols. Printing
+        # a narrow one advances a single cell and every column after it on that
+        # row slides left. Pad them so each glyph occupies the same width.
+        import unicodedata as _u
+        self.padded = ["".join([g, " "]) if self.cell_w == 2
+                       and _u.east_asian_width(g) not in ("W", "F") else g
+                       for g in self.glyphs]
         self.resize(cols, rows)
 
     def resize(self, term_cols, rows):
@@ -183,9 +191,9 @@ class Rain:
         a0 = self.age0[x][y]
         k = math.floor(a0 + self.cycles*t)
         if k < 1:
-            return self.glyphs[self.sym0[x][y]]
+            return self.padded[self.sym0[x][y]]
         tk = (k - a0)/self.cycles
-        return self.glyphs[int(len(self.glyphs)*rand_float(x/self.cols, y/self.rows + tk))
+        return self.padded[int(len(self.glyphs)*rand_float(x/self.cols, y/self.rows + tk))
                            % len(self.glyphs)]
 
 
@@ -207,7 +215,7 @@ def run(rain, fps=20):
                 if lit <= 0.02:
                     if prev is not None:
                         buf.append("\x1b[0m"); prev = None
-                    buf.append(" ")
+                    buf.append(" " * rain.cell_w)
                     continue
                 r, g, bl = CURSOR if b > below else palette(lit)
                 col = (int(r*255*min(1, lit*2 if b > below else 1)),

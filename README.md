@@ -77,11 +77,23 @@ Matrix-Code has the same 0.934 em advance, about one cell.
 | | glyphs | cells | font |
 |---|---|---|---|
 | default | 56, katakana folded to their halfwidth twins | 1 | any |
-| `--font` | 56, the font's own codepoints | 2 | needs Matrix-Code set in your terminal |
+| `--font` | 56, the font's own codepoints | 2 | opens a terminal with Matrix-Code |
 
 So: a tight grid with near-identical shapes from any font, or the film's exact
-glyphs sitting loose in double-width cells. The font has no halfwidth katakana
-at all, so there is no third option.
+glyphs in double-width cells. The font has no halfwidth katakana at all, so
+there is no third option.
+
+`--font` only means anything if the terminal is actually using Matrix-Code, and
+a program cannot change the font of the terminal it was typed into. So it opens
+one that has it — ghostty, foot, alacritty or kitty, whichever is there — the
+way Omarchy's own screensaver does. `install.sh` puts the font in
+`~/.local/share/fonts`, and `uninstall.sh` takes it back out.
+
+Set `MATRIX_FONT_SIZE` to change the size of that terminal.
+
+Padding matters here: the set mixes the font's fullwidth katakana with narrow
+digits and symbols, and printing a narrow one advances a single cell, sliding
+every column after it on that row. Each glyph is padded to the same width.
 
 ### One thing that had to change
 

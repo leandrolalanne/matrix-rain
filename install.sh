@@ -49,6 +49,16 @@ fi
 ln -sf "$SHARE/bin/$CMD" "$BIN/$CMD"
 echo "linked  $BIN/$CMD"
 
+# The film's font, so --font has something to render with. User-level, and
+# uninstall.sh takes it back out.
+FONTS="${XDG_DATA_HOME:-$HOME/.local/share}/fonts"
+if [[ -f $SRC/assets/Matrix-Code.ttf ]]; then
+  mkdir -p "$FONTS"
+  cp "$SRC/assets/Matrix-Code.ttf" "$FONTS/"
+  command -v fc-cache >/dev/null && fc-cache -f "$FONTS" >/dev/null 2>&1
+  echo "installed  $FONTS/Matrix-Code.ttf"
+fi
+
 # --- check it is reachable ---
 if ! printf '%s' ":$PATH:" | grep -q ":$BIN:"; then
   echo
