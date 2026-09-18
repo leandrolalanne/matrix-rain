@@ -5,6 +5,9 @@
 #   enterthematrix operator        a specific one
 #   enterthematrix --list          what is available
 #   enterthematrix --tty           the rain in this terminal, no window
+#   enterthematrix --tty --font    the film's own glyphs. Runs in this terminal
+#                                  if it already resolves Matrix-Code, opens one
+#                                  that does otherwise.
 #
 # While it runs: v next version, i replay the intro, f fps, h hint, q quit.
 
@@ -18,6 +21,7 @@ while [ -L "$SELF" ]; do
   [[ $SELF != /* ]] && SELF="$DIR/$SELF"
 done
 ROOT="$(cd -P "$(dirname "$SELF")/.." && pwd)"
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 # The names come from provider.json rather than by parsing the JS: it is a
 # declared product file and a flat array, so no JS evaluation is needed.
@@ -26,32 +30,104 @@ versions() {
     | tr -d '"' | tr ',' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$'
 }
 
+# --- the terminal we were typed into -----------------------------------------
+# A program cannot change its terminal's font from the inside. Ghostty's
+# set_font_size is a keybind action, not an escape sequence, and it does not
+# implement xterm's OSC 50. So --font runs in this window only if the font is
+# already in the terminal's chain. Most terminals take a list and fall through
+# to the next font for codepoints the first one does not map, which is exactly
+# this case: Matrix-Code's katakana are what a coding font lacks.
+
+terminal_app() {
+  case "${TERM_PROGRAM:-}" in ghostty|kitty) echo "$TERM_PROGRAM"; return 0 ;; esac
+  [[ -n ${KITTY_WINDOW_ID:-} ]]     && { echo kitty; return 0; }
+  [[ -n ${ALACRITTY_WINDOW_ID:-} ]] && { echo alacritty; return 0; }
+  # foot exports nothing of its own and its term= can be renamed, so walk up the
+  # process tree. Compare the binary name, never a substring of a command line.
+  local pid=$PPID comm
+  while [[ -r /proc/$pid/comm ]]; do
+    read -r comm < "/proc/$pid/comm"
+    case $comm in ghostty|foot|alacritty|kitty) echo "$comm"; return 0 ;; esac
+    # In /proc/<pid>/stat the name is parenthesised and may contain spaces; ppid
+    # is the second field after the closing paren.
+    pid="$(sed 's/.*) //' "/proc/$pid/stat" 2>/dev/null | cut -d' ' -f2)"
+    [[ -n $pid && $pid -gt 1 ]] || break
+  done
+  return 1
+}
+
+# A config file plus the ones it pulls in, one level deep: ghostty writes
+# `config-file = ?"path"` (the ? marks it optional), foot writes `include=path`.
+terminal_config() {
+  local file="$1" inc
+  [[ -r $file ]] || return 0
+  cat "$file"
+  sed -n 's/^[[:space:]]*\(config-file\|include\)[[:space:]]*=[[:space:]]*?\{0,1\}"\{0,1\}\([^"]*\)"\{0,1\}[[:space:]]*$/\2/p' "$file" \
+  | while read -r inc; do
+      inc="${inc/#\~/$HOME}"
+      [[ -r $inc ]] && cat "$inc"
+    done
+}
+
+# True when this terminal already resolves Matrix-Code, as its font or as a
+# fallback for the codepoints the font maps.
+terminal_has_font() {
+  local file keys
+  case "$1" in
+    ghostty)   file="$CONFIG/ghostty/config";          keys='font-family' ;;
+    foot)      file="$CONFIG/foot/foot.ini";           keys='font' ;;
+    alacritty) file="$CONFIG/alacritty/alacritty.toml"; keys='family' ;;
+    kitty)     file="$CONFIG/kitty/kitty.conf";        keys='font_family|symbol_map' ;;
+    *) return 1 ;;
+  esac
+  # kitty separates key from value with a space, the others with '='. Requiring
+  # one of them is also what keeps `font` from matching `font-size`.
+  terminal_config "$file" | grep -Eqi "^[[:space:]]*($keys)([[:space:]]|=)+.*matrix-?code"
+}
+
+# What the user would add to run it here instead. One line, in their syntax.
+font_chain_hint() {
+  case "$1" in
+    ghostty)   echo "font-family = \"Matrix-Code\"  to ${CONFIG/#$HOME/\~}/ghostty/config" ;;
+    foot)      echo "font=<yours>:size=9, Matrix-Code  to ${CONFIG/#$HOME/\~}/foot/foot.ini" ;;
+    kitty)     echo "symbol_map U+30A0-U+30FF Matrix-Code  to ${CONFIG/#$HOME/\~}/kitty/kitty.conf" ;;
+    alacritty) echo "family = \"Matrix-Code\"  to ${CONFIG/#$HOME/\~}/alacritty/alacritty.toml" ;;
+  esac
+}
+
 case "${1:-}" in
-  -h|--help) sed -n '2,9p' "$SELF" | sed 's/^# \{0,1\}//'; exit 0 ;;
-  --list)    versions | sed 's/^/  /'; exit 0 ;;
+  -h|--help)
+    # Every leading comment line after the shebang, so the help cannot drift.
+    awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$SELF"
+    exit 0 ;;
+  --list) versions | sed 's/^/  /'; exit 0 ;;
   --tty)
     shift
-    # --font only means anything if the terminal is actually using Matrix-Code,
-    # and we cannot change the font of the terminal we were typed into. So open
-    # one that has it, the way Omarchy's own screensaver does. MATRIX_IN_TERM
-    # stops the spawned instance from spawning another.
+    # MATRIX_IN_TERM stops a spawned instance from spawning another.
     if [[ " $* " == *" --font "* && -z ${MATRIX_IN_TERM:-} ]]; then
-      size="${MATRIX_FONT_SIZE:-9}"
-      for t in ghostty foot alacritty kitty; do
-        command -v "$t" >/dev/null || continue
-        case $t in
-          ghostty)   exec env MATRIX_IN_TERM=1 ghostty --font-family="Matrix-Code" --font-size="$size" \
-                       -e "$ROOT/bin/enterthematrix-tty" "$@" ;;
-          foot)      exec env MATRIX_IN_TERM=1 foot --font="Matrix-Code:size=$size" \
-                       -e "$ROOT/bin/enterthematrix-tty" "$@" ;;
-          alacritty) exec env MATRIX_IN_TERM=1 alacritty -o "font.normal.family=Matrix-Code" \
-                       -o "font.size=$size" -e "$ROOT/bin/enterthematrix-tty" "$@" ;;
-          kitty)     exec env MATRIX_IN_TERM=1 kitty -o font_family="Matrix-Code" \
-                       -o font_size="$size" "$ROOT/bin/enterthematrix-tty" "$@" ;;
-        esac
-      done
-      echo "enterthematrix: no ghostty, foot, alacritty or kitty to open with the font." >&2
-      echo "Running here instead; set Matrix-Code as your terminal font to see it." >&2
+      app="$(terminal_app || true)"
+      if ! terminal_has_font "$app"; then
+        size="${MATRIX_FONT_SIZE:-9}"
+        hint="$(font_chain_hint "$app")"
+        [[ -t 2 && -n $hint ]] && {
+          echo "enterthematrix: this terminal does not resolve Matrix-Code; opening one that does." >&2
+          echo "                To run in place instead, add  $hint" >&2; }
+        for t in ghostty foot alacritty kitty; do
+          command -v "$t" >/dev/null || continue
+          case $t in
+            ghostty)   exec env MATRIX_IN_TERM=1 ghostty --font-family="Matrix-Code" --font-size="$size" \
+                         -e "$ROOT/bin/enterthematrix-tty" "$@" ;;
+            foot)      exec env MATRIX_IN_TERM=1 foot --font="Matrix-Code:size=$size" \
+                         -e "$ROOT/bin/enterthematrix-tty" "$@" ;;
+            alacritty) exec env MATRIX_IN_TERM=1 alacritty -o "font.normal.family=Matrix-Code" \
+                         -o "font.size=$size" -e "$ROOT/bin/enterthematrix-tty" "$@" ;;
+            kitty)     exec env MATRIX_IN_TERM=1 kitty -o font_family="Matrix-Code" \
+                         -o font_size="$size" "$ROOT/bin/enterthematrix-tty" "$@" ;;
+          esac
+        done
+        echo "enterthematrix: no ghostty, foot, alacritty or kitty to open with the font." >&2
+        echo "Running here instead; set Matrix-Code as your terminal font to see it." >&2
+      fi
     fi
     exec "$ROOT/bin/enterthematrix-tty" "$@" ;;
 esac

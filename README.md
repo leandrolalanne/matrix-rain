@@ -79,20 +79,63 @@ Matrix-Code has the same 0.934 em advance, about one cell.
 | | glyphs | cells | font |
 |---|---|---|---|
 | default | 56, katakana folded to their halfwidth twins | 1 | any |
-| `--font` | 56, the font's own codepoints | 2 | opens a terminal with Matrix-Code |
+| `--font` | 56, the font's own codepoints | 2 | needs Matrix-Code in the terminal |
 
 So: a tight grid with near-identical shapes from any font, or the film's exact
 glyphs in double-width cells. The font has no halfwidth katakana at all, so
 there is no third option.
 
 `--font` only means anything if the terminal is actually using Matrix-Code, and
-a program cannot change the font of the terminal it was typed into. So it opens
-one that has it — ghostty, foot, alacritty or kitty, whichever is there — the
-way Omarchy's own screensaver does. `install.sh` puts the font in
-`~/.local/share/fonts`, and `uninstall.sh` takes it back out.
+**a program cannot change the font of the terminal it was typed into**. Ghostty's
+`set_font_size` is a keybind action, not an escape sequence, and it does not
+implement xterm's OSC 50; the others are the same. There is no channel for it.
 
-That terminal opens at **9 pt**, the same default the shader uses, so both
-renderers start at the same size. `MATRIX_FONT_SIZE` changes it.
+So `--font` checks first, and takes whichever path is open:
+
+- **the terminal already resolves Matrix-Code** — it runs right here, in the
+  window you typed in, the way `cmatrix` does.
+- **it does not** — it opens one that does, ghostty, foot, alacritty or kitty,
+  whichever is there, the way Omarchy's own screensaver does. That terminal opens
+  at **9 pt**, the same default the shader uses, so both renderers start at the
+  same size. `MATRIX_FONT_SIZE` changes it.
+
+`install.sh` puts the font in `~/.local/share/fonts`, and `uninstall.sh` takes it
+back out.
+
+### Running it in place
+
+Most terminals take a **list** of fonts and fall through to the next one for
+codepoints the first does not map. That is exactly this case — a coding font has
+no katakana — so one added line is enough:
+
+```ini
+# ~/.config/ghostty/config
+font-family = "JetBrainsMono Nerd Font"
+font-family = "Matrix-Code"
+```
+
+```ini
+# ~/.config/foot/foot.ini
+font=JetBrainsMono Nerd Font:size=9, Matrix-Code:size=9
+```
+
+```conf
+# ~/.config/kitty/kitty.conf
+symbol_map U+30A0-U+30FF Matrix-Code
+```
+
+Then `enterthematrix --tty --font` runs in place. This is **opt-in**: the
+installer never edits a terminal config, because the fallback applies to every
+window of that terminal from then on. Of Matrix-Code's 58 codepoints a coding
+font already covers the ASCII ones, so only the **39 non-Latin** ones — the
+katakana and a few symbols — would ever be drawn from it elsewhere.
+
+The launcher works out which terminal it is in from `TERM_PROGRAM`,
+`KITTY_WINDOW_ID` or `ALACRITTY_WINDOW_ID`, and failing that by walking up the
+process tree comparing binary names (foot exports nothing of its own and its
+`term=` can be renamed). It reads that terminal's config, and the files the
+config includes, for the font in the chain. When it has to open a window instead,
+it prints the one line you would add to avoid that.
 
 Note that at two cells per column the glyph, whose advance is 0.934 em, fills
 about half of its box. The columns end up spaced by roughly one glyph width.
