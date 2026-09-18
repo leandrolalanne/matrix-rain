@@ -48,7 +48,7 @@ problem: just ask Chromium for whatever size actually came out, because
 looks correct and the shader math is the same, but it is worth keeping in mind
 as a possible source of small differences.
 
-## The four traps
+## The five traps
 
 **1. Capturing the monitor instead of the window.** `visibility:
 Window.FullScreen` does not always win: Hyprland tiles the window anyway, and
@@ -70,3 +70,12 @@ metrics move by ~5%. Any difference smaller than that is noise.
 autocorrelation has harmonics, and the global maximum is often 2x or 3x the real
 period. Look for the *smallest* lag above a threshold instead. This one caused a
 working reflow implementation to be reported as broken.
+
+**5. Running `dev/grab.qml` under `QT_QPA_PLATFORM=offscreen`.** It looks like
+the right way to render without a window, and it exits 0 and writes a PNG of the
+right size — fully black, mean 0. There is no GL context for the shader chain
+there, and nothing says so. A measurement taken that way reports -100% and
+blames the change under test. `grab.qml` already avoids the screen with
+`grabToImage`, so run it on the normal platform, the way `tools/make-marker.sh`
+does. Sanity-check every capture's mean before comparing anything: a real frame
+of the rain sits near 0.05.
