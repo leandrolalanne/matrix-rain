@@ -1,7 +1,12 @@
-// Grab a frame of the rain to a PNG, with no visible window and no window
-// manager in the way. `grabToImage` renders the item into its own buffer, so
-// the result does not depend on the item being visible, on which workspace it
-// lands, or on how the compositor tiles it.
+// Grab a frame of the rain to a PNG. `grabToImage` renders the item into its
+// own buffer, so the result does not depend on the item being on screen, on
+// which workspace it lands, or on how the compositor tiles it -- which is the
+// point: the previous version used `grim` and photographed the desktop.
+//
+// A small window does appear while it runs. It has to: Qt needs a real GL
+// context, and there is none under QT_QPA_PLATFORM=offscreen -- every frame
+// comes back black there, with no error. The rendered item lives outside that
+// window, so what the window shows is irrelevant to the capture.
 //
 // Usage: qml6 dev/grab.qml -- out=<file.png> [key=value ...]
 //
@@ -50,7 +55,7 @@ Window {
     grabTimer.start()
   }
 
-  // The item deliberately lives outside the visible window: it still renders
+  // The item deliberately lives outside the window's bounds: it still renders
   // because grabToImage draws it into a buffer of its own.
   MatrixRain {
     id: rain

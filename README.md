@@ -9,6 +9,8 @@ matrix      # the rain on the GPU, with bloom and the intro
 redpill     # the same rain, in this terminal, with the film's own glyphs
 ```
 
+![Five windows of the rain tiled across a desktop](docs/media/desktop.jpg)
+
 ## What it is
 
 A prop, not a screensaver. The difference is the standard it is held to: it has
@@ -27,6 +29,8 @@ to run it, and it lets go of the terminal the moment it is up — so you can clo
 that window, and open as many of them as you like.
 
 Five versions, each with its own atlas and parameters:
+
+![The five versions side by side](docs/media/versions.jpg)
 
 | | |
 |---|---|
@@ -87,11 +91,14 @@ matrix operator        # start on a specific version
 matrix list            # what is available
 ```
 
-It opens as a normal window where you are, not as a fullscreen takeover.
-Super+F fullscreens it if you want that.
+It opens a normal window on your desktop, where you are. That is the whole
+design: a prop is something you place, so your window manager decides what
+happens to it. Fullscreen it, tile it, float it, put one on each monitor, run
+five at once on different versions — nothing here takes the screen from you.
 
-**It detaches from the terminal.** The prompt comes straight back, and the
-terminal can be closed, moved or reused without taking the rain with it. It is
+**It detaches from the terminal**, which is what makes that practical. The
+prompt comes straight back, the terminal can be closed or reused without taking
+the rain with it, and the next `matrix` is another independent window. It is
 also in your application launcher as *Matrix Rain*, which starts it with no
 terminal in the picture at all. `MATRIX_FOREGROUND=1` keeps it attached, which
 is what a script would want.
@@ -111,6 +118,8 @@ redpill plain          # one cell per glyph, any font, never a window
 `MATRIX_FPS`, `MATRIX_PALETTE=classic` and `MATRIX_FONT_SIZE` tune it. There are
 no flags: which glyphs your terminal can reach is something the launcher works
 out, not something you should have to say.
+
+![The rain in a terminal window, in the film's own glyphs](docs/media/terminal.jpg)
 
 It is **the same rain**, not a lookalike: the brightness function is ported
 line for line from the shader, so a column falls here exactly as it falls there.
