@@ -18,9 +18,16 @@ while [ -L "$SELF" ]; do
 done
 ROOT="$(cd -P "$(dirname "$SELF")/.." && pwd)"
 
+# The names come from provider.json rather than by parsing the JS: it is a
+# declared product file and a flat array, so no JS evaluation is needed.
+versions() {
+  sed -n 's/.*"available": \[\(.*\)\].*/\1/p' "$ROOT/provider.json" \
+    | tr -d '"' | tr ',' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$'
+}
+
 case "${1:-}" in
   -h|--help) sed -n '2,9p' "$SELF" | sed 's/^# \{0,1\}//'; exit 0 ;;
-  --list)    sed -n 's/^  \([a-z]*\): {$/  \1/p' "$ROOT/qml/Versions.js"; exit 0 ;;
+  --list)    versions | sed 's/^/  /'; exit 0 ;;
 esac
 
 command -v qml6 >/dev/null || {
@@ -30,7 +37,7 @@ command -v qml6 >/dev/null || {
   echo "If you are running from a source tree, run $ROOT/tools/build-shaders.sh" >&2; exit 1; }
 
 VERSION="${1:-}"
-if [[ -n $VERSION ]] && ! grep -q "^  $VERSION: {" "$ROOT/qml/Versions.js"; then
+if [[ -n $VERSION ]] && ! versions | grep -qx "$VERSION"; then
   echo "enterthematrix: no version called '$VERSION'. Try --list." >&2; exit 1
 fi
 

@@ -108,11 +108,13 @@ MatrixRain { skipIntro: false }         // the rain arrives onto a blank screen
 |---|---|
 | `classic` | The code everyone knows, from the sequels' opening titles. |
 | `operator` | The first film's titles and the operators' screens: flatter, crowded, no gradient, with square ripples crossing it. |
+| `operator-plain` | The same, with the ripples switched off. |
 | `megacity` | The classic code with the Megacity as a glyph, from *Revolutions*. |
 | `resurrections` | The updated code from *Matrix Resurrections*. |
 
 Each version is an atlas plus a parameter bundle; `qml/Versions.js` holds them
-and every value stays individually overridable from outside.
+and every value stays individually overridable from outside. `operator-plain` is
+derived from `operator` rather than copied, so the two cannot drift apart.
 
 Two upstream keys are translated rather than copied. `numColumns` becomes
 `fontSize`, because this port sizes by point like a terminal instead of pinning
@@ -136,6 +138,8 @@ resolves in closed form and needs no state, like the rest of the rain.
 them in a fourth ping-pong buffer, but **its effect shader never reads the
 previous state** — `getRipple` is a pure function of `(time, position)` — so
 they live in the rain shader here and need no buffer.
+
+`operator-plain` exists for when you want that look without them.
 
 They are on screen about **7% of the time**: the band crosses the visible area
 during the first 2/30 of each ~10 second cycle. Worth knowing before concluding

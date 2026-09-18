@@ -107,6 +107,14 @@ var versions = {
   }
 }
 
+// The same operator with the ripples switched off. Derived from it rather than
+// copied so the two cannot drift apart: change operator and this follows.
+versions["operator-plain"] = Object.assign({}, versions.operator, {
+  label: "Operator (plain)",
+  description: "The operators' screens without the ripples sweeping across them.",
+  ripple: ""
+})
+
 function names() {
   return Object.keys(versions)
 }
