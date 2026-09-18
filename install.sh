@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install the rain so `enterthematrix` works from any shell.
+# Install the rain so `matrix` and `redpill` work from any shell.
 #
 #   ./install.sh            copy into ~/.local/share and link the command
 #   ./install.sh --link     symlink instead, so edits in this tree are live
@@ -11,7 +11,10 @@
 set -uo pipefail
 
 NAME="matrix-rain"
-CMD="enterthematrix"
+CMDS=(matrix redpill)
+# Linked as `enterthematrix` before the commands were split in two. Left behind
+# it would dangle, so the install clears it.
+OLD_CMDS=(enterthematrix)
 SRC="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 SHARE="${XDG_DATA_HOME:-$HOME/.local/share}/$NAME"
 BIN="$HOME/.local/bin"
@@ -46,13 +49,19 @@ else
   echo "copied  $SHARE"
 fi
 
-ln -sf "$SHARE/bin/$CMD" "$BIN/$CMD"
-echo "linked  $BIN/$CMD"
+for c in "${CMDS[@]}"; do
+  ln -sf "$SHARE/bin/$c" "$BIN/$c"
+  echo "linked  $BIN/$c"
+done
+for c in "${OLD_CMDS[@]}"; do
+  [[ -L $BIN/$c ]] || continue
+  rm -f "$BIN/$c"; echo "removed $BIN/$c (renamed)"
+done
 
-# Two fonts, so --font has something to render with. User-level, and
+# Two fonts, so redpill has something to render with. User-level, and
 # uninstall.sh takes them back out.
 #
-#   Matrix-Code.ttf        the film's font as published, for the window --font
+#   Matrix-Code.ttf        the film's font as published, for the window redpill
 #                          opens when it has to.
 #   MatrixCodeTerminal.ttf the same outlines moved to plane 16, for running in
 #                          the window you typed in. See tools/make-terminal-font.py.
@@ -74,7 +83,7 @@ if (( installed_font )); then
   echo
   echo "To run the rain in the window you type in, add to your terminal config:"
   echo "      font-family = \"Matrix Code Terminal\"      # ghostty"
-  echo "  Without it, 'enterthematrix --tty --font' opens a window of its own."
+  echo "  Without it, 'redpill' opens a window of its own."
 fi
 
 # --- check it is reachable ---
@@ -84,5 +93,5 @@ if ! printf '%s' ":$PATH:" | grep -q ":$BIN:"; then
   echo "      export PATH=\"\$HOME/.local/bin:\$PATH\""
 else
   echo
-  echo "Done. Type: $CMD"
+  echo "Done. Type: ${CMDS[0]} for the GPU rain, ${CMDS[1]} for it in this terminal."
 fi

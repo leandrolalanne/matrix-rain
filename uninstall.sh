@@ -2,12 +2,17 @@
 # Remove what install.sh put in place. Leaves this source tree alone.
 set -uo pipefail
 NAME="matrix-rain"
-CMD="enterthematrix"
+# enterthematrix is the name both commands had before the split; an install from
+# then would have left it behind.
+CMDS=(matrix redpill enterthematrix)
 SHARE="${XDG_DATA_HOME:-$HOME/.local/share}/$NAME"
-BIN="$HOME/.local/bin/$CMD"
+BIN="$HOME/.local/bin"
 
 removed=0
-[[ -e $BIN   ]] && { rm -f "$BIN";    echo "removed $BIN";   removed=1; }
+for c in "${CMDS[@]}"; do
+  [[ -e $BIN/$c ]] || continue
+  rm -f "$BIN/$c"; echo "removed $BIN/$c"; removed=1
+done
 # -L first: in --link mode SHARE is a symlink to the source tree, and rm -rf on
 # the link removes the link, not the tree. Never follow it.
 if [[ -L $SHARE ]]; then rm -f "$SHARE"; echo "removed $SHARE (was a link)"; removed=1

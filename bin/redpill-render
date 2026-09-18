@@ -295,13 +295,15 @@ def run(rain, fps=20):
 
 USAGE = """the rain, in the terminal
 
-  enterthematrix --tty            halfwidth katakana, one cell, any font
-  enterthematrix --tty --font     the codepoints Matrix-Code.ttf maps, here if
-                                  this terminal resolves them, else in a window
-  enterthematrix --tty --operator the operator rhythm and density, no ripples
-  enterthematrix --tty --classic  upstream's palette instead of the cool one
+  redpill              the film's own glyphs, right here
+  redpill operator     the operator rhythm and density, no ripples
+  redpill plain        one cell per glyph, any font, never a window
 
-  MATRIX_FPS=30 to change the frame rate. Any key quits.
+  MATRIX_FPS=30 changes the frame rate, MATRIX_PALETTE=classic swaps the cool
+  palette for upstream's. Any key quits.
+
+  This is the renderer; `redpill` is what picks the glyph mode for it.
+  --glyphs=narrow|font|pua and --version=classic|operator override that.
 """
 
 
@@ -309,13 +311,19 @@ def main():
     args = sys.argv[1:]
     if "-h" in args or "--help" in args:
         print(USAGE); return
-    # --pua is set by the launcher when this terminal already resolves the
-    # plane 16 font, which is what lets --font run in the window you typed in.
-    glyph_mode = "pua" if "--pua" in args else ("font" if "--font" in args else "narrow")
-    use_palette("classic" if "--classic" in args else "cold")
-    version = "operator" if "--operator" in args else "classic"
+    # The launcher works out the glyph mode: it is the only one that knows
+    # whether this terminal resolves the plane 16 font.
+    glyph_mode, version = "narrow", "classic"
+    for a in args:
+        if a.startswith("--glyphs="):
+            glyph_mode = a.split("=", 1)[1]
+        elif a.startswith("--version="):
+            version = a.split("=", 1)[1]
+    if glyph_mode not in ("narrow", "font", "pua"):
+        sys.exit(f"redpill-render: no glyph mode called {glyph_mode!r}")
+    use_palette(os.environ.get("MATRIX_PALETTE", "cold"))
     if not sys.stdout.isatty():
-        sys.exit("enterthematrix-tty: needs a terminal")
+        sys.exit("redpill: needs a terminal")
     fd = sys.stdin.fileno()
     saved = termios.tcgetattr(fd)
     cols, rows = os.get_terminal_size()

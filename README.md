@@ -17,9 +17,11 @@ cd omarchy-matrix-rain
 Then, from any shell:
 
 ```bash
-enterthematrix                 # classic, arriving from a blank screen
-enterthematrix operator        # start on a specific version
-enterthematrix --list          # what is available
+matrix                 # classic, arriving from a blank screen
+matrix operator        # start on a specific version
+matrix list            # what is available
+
+redpill                # the same rain, in the terminal you typed in
 ```
 
 It opens as a normal window where you are, not as a fullscreen takeover. Super+F
@@ -44,21 +46,26 @@ undoes either, and never follows the link when removing.
 This works outside Omarchy: it is a plain Qt Quick application with no Omarchy
 dependency.
 
-> The command is named after the film's line, run together because a shell
-> command cannot have spaces. There is also an Omarchy theme
+> Two commands, named for what they do rather than for a mode flag. `matrix` is
+> the rain as the film renders it, on the GPU. `redpill` is the choice to see the
+> code itself, in the terminal you are already in — no window, no font to set up,
+> nothing to configure. There is also an unrelated Omarchy theme
 > called [Enter the Matrix](https://github.com/tymurbogach/omarchy-enterthematrix-theme),
-> unrelated to this project, whose own command is `omarchy-matrix`. This one
-> credits that theme below for a finding it published first.
+> whose own command is `omarchy-matrix`. This one credits that theme below for a
+> finding it published first.
 
 
 ## In the terminal
 
 ```bash
-enterthematrix --tty            # halfwidth katakana, one cell, any font
-enterthematrix --tty --font     # the codepoints Matrix-Code.ttf maps
-enterthematrix --tty --operator # the operator rhythm and density
-enterthematrix --tty --classic  # upstream's palette instead of the cool one
+redpill                 # the film's own glyphs, right here
+redpill operator        # the operator rhythm and density
+redpill plain           # one cell per glyph, any font, never a window
 ```
+
+`MATRIX_FPS`, `MATRIX_PALETTE=classic` and `MATRIX_FONT_SIZE` tune it. There are
+no flags: which glyphs are reachable is something the launcher works out, not
+something you should have to say.
 
 Pure stdlib Python, no window. **The same field as the shader**:
 `getRainBrightness` is ported verbatim from `shaders/rain.frag`, wobble and all,
@@ -139,7 +146,7 @@ font=JetBrainsMono Nerd Font:size=9, Matrix Code Terminal:size=9
 symbol_map U+100000-U+10FFFD Matrix Code Terminal
 ```
 
-Then `enterthematrix --tty --font` runs in the window you typed in. It stays
+Then `redpill` runs in the window you typed in. It stays
 **opt-in**: `install.sh` puts the font in place and prints the line, but never
 edits a terminal config. That file belongs to the user.
 
@@ -347,9 +354,9 @@ is what:
 | `shaders/*.frag` | source | the GLSL the `.qsb` are built from |
 | `tools/build-shaders.sh` | source | compiles them; only needed if you edit a `.frag` |
 | `tools/make-marker.sh` | source | regenerates the marker offscreen |
-| `qml/Main.qml` | **product** | the fullscreen app the command runs |
+| `qml/Main.qml` | **product** | the app `matrix` runs |
 | `install.sh`, `uninstall.sh`, `bin/` | **product** | the install |
-| `bin/enterthematrix-tty` | **product** | the terminal renderer |
+| `bin/redpill-render` | **product** | the terminal renderer |
 | `dev/` | development | `main.qml` is the preview, `grab.qml` captures without a screen |
 | `tools/preview.sh` | development | opens the preview, and the reference beside it |
 | `tools/COMPARISON.md` | development | how to measure against the reference without measuring wrong |

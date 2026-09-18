@@ -1,0 +1,52 @@
+#!/bin/bash
+# matrix: the digital rain, rendered on the GPU.
+#
+#   matrix                 classic, arriving from a blank screen
+#   matrix operator        start on a specific version
+#   matrix list            what is available
+#
+# While it runs: v next version, i replay the intro, f fps, h hint, q quit.
+# For the rain in the terminal you typed in, see redpill.
+
+set -uo pipefail
+
+# Resolve the install root whether this is the real file or a symlink to it.
+SELF="${BASH_SOURCE[0]}"
+while [ -L "$SELF" ]; do
+  DIR="$(cd -P "$(dirname "$SELF")" && pwd)"
+  SELF="$(readlink "$SELF")"
+  [[ $SELF != /* ]] && SELF="$DIR/$SELF"
+done
+ROOT="$(cd -P "$(dirname "$SELF")/.." && pwd)"
+
+# The names come from provider.json rather than by parsing the JS: it is a
+# declared product file and a flat array, so no JS evaluation is needed.
+versions() {
+  sed -n 's/.*"available": \[\(.*\)\].*/\1/p' "$ROOT/provider.json" \
+    | tr -d '"' | tr ',' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$'
+}
+
+case "${1:-}" in
+  -h|--help|help)
+    # Every leading comment line after the shebang, so the help cannot drift.
+    awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$SELF"
+    exit 0 ;;
+  list) versions | sed 's/^/  /'; exit 0 ;;
+esac
+
+command -v qml6 >/dev/null || {
+  echo "matrix: qml6 is missing. Install qt6-declarative." >&2; exit 1; }
+[[ -f $ROOT/shaders/rain.frag.qsb ]] || {
+  echo "matrix: compiled shaders are missing from $ROOT/shaders." >&2
+  echo "If you are running from a source tree, run $ROOT/tools/build-shaders.sh" >&2; exit 1; }
+
+VERSION="${1:-}"
+if [[ -n $VERSION ]] && ! versions | grep -qx "$VERSION"; then
+  echo "matrix: no version called '$VERSION'. Try: matrix list" >&2; exit 1
+fi
+
+if [[ -n $VERSION ]]; then
+  exec qml6 "$ROOT/qml/Main.qml" -- "version=$VERSION"
+else
+  exec qml6 "$ROOT/qml/Main.qml"
+fi

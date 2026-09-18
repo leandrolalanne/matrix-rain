@@ -1,0 +1,138 @@
+#!/bin/bash
+# redpill: the digital rain, in the terminal you typed in.
+#
+#   redpill                the film's own glyphs, right here
+#   redpill operator       the operator rhythm and density
+#   redpill plain          one cell per glyph, any font, never a window
+#
+# Any key quits. MATRIX_FPS, MATRIX_PALETTE=classic and MATRIX_FONT_SIZE tune it.
+# For the GPU version, with bloom and the intro, see matrix.
+
+set -uo pipefail
+
+SELF="${BASH_SOURCE[0]}"
+while [ -L "$SELF" ]; do
+  DIR="$(cd -P "$(dirname "$SELF")" && pwd)"
+  SELF="$(readlink "$SELF")"
+  [[ $SELF != /* ]] && SELF="$DIR/$SELF"
+done
+ROOT="$(cd -P "$(dirname "$SELF")/.." && pwd)"
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+# --- the terminal we were typed into -----------------------------------------
+# A program cannot change its terminal's font from the inside. Ghostty's
+# set_font_size is a keybind action, not an escape sequence, and it does not
+# implement xterm's OSC 50. So the film's glyphs appear in this window only if
+# the font is already in the terminal's chain. Most terminals take a list and
+# fall through to the next font for codepoints the first does not map.
+
+terminal_app() {
+  case "${TERM_PROGRAM:-}" in ghostty|kitty) echo "$TERM_PROGRAM"; return 0 ;; esac
+  [[ -n ${KITTY_WINDOW_ID:-} ]]     && { echo kitty; return 0; }
+  [[ -n ${ALACRITTY_WINDOW_ID:-} ]] && { echo alacritty; return 0; }
+  # foot exports nothing of its own and its term= can be renamed, so walk up the
+  # process tree. Compare the binary name, never a substring of a command line.
+  local pid=$PPID comm
+  while [[ -r /proc/$pid/comm ]]; do
+    read -r comm < "/proc/$pid/comm"
+    case $comm in ghostty|foot|alacritty|kitty) echo "$comm"; return 0 ;; esac
+    # In /proc/<pid>/stat the name is parenthesised and may contain spaces; ppid
+    # is the second field after the closing paren.
+    pid="$(sed 's/.*) //' "/proc/$pid/stat" 2>/dev/null | cut -d' ' -f2)"
+    [[ -n $pid && $pid -gt 1 ]] || break
+  done
+  return 1
+}
+
+# A config file plus the ones it pulls in, one level deep: ghostty writes
+# `config-file = ?"path"` (the ? marks it optional), foot writes `include=path`.
+terminal_config() {
+  local file="$1" inc
+  [[ -r $file ]] || return 0
+  cat "$file"
+  sed -n 's/^[[:space:]]*\(config-file\|include\)[[:space:]]*=[[:space:]]*?\{0,1\}"\{0,1\}\([^"]*\)"\{0,1\}[[:space:]]*$/\2/p' "$file" \
+  | while read -r inc; do
+      inc="${inc/#\~/$HOME}"
+      [[ -r $inc ]] && cat "$inc"
+    done
+}
+
+# True when this terminal's font chain contains the family matching $2.
+terminal_resolves() {
+  local file keys
+  case "$1" in
+    ghostty)   file="$CONFIG/ghostty/config";           keys='font-family' ;;
+    foot)      file="$CONFIG/foot/foot.ini";            keys='font' ;;
+    alacritty) file="$CONFIG/alacritty/alacritty.toml"; keys='family' ;;
+    kitty)     file="$CONFIG/kitty/kitty.conf";         keys='font_family|symbol_map' ;;
+    *) return 1 ;;
+  esac
+  # kitty separates key from value with a space, the others with '='. Requiring
+  # one of them is also what keeps `font` from matching `font-size`.
+  terminal_config "$file" | grep -Eqi "^[[:space:]]*($keys)([[:space:]]|=)+.*$2"
+}
+
+# What the user would add to run it here instead. One line, in their syntax.
+# It names the plane 16 font, never Matrix-Code itself: that one maps digits and
+# punctuation, and a chain entry for it would supply those to every window of
+# that terminal from then on. The derived font maps nothing a person can type.
+font_chain_hint() {
+  local at="${CONFIG/#$HOME/\~}"
+  case "$1" in
+    ghostty)   echo "font-family = \"Matrix Code Terminal\"  to $at/ghostty/config" ;;
+    foot)      echo "Matrix Code Terminal to the font= list  in $at/foot/foot.ini" ;;
+    kitty)     echo "symbol_map U+100000-U+10FFFD Matrix Code Terminal  to $at/kitty/kitty.conf" ;;
+    alacritty) echo "Matrix Code Terminal as a fallback  in $at/alacritty/alacritty.toml" ;;
+  esac
+}
+
+# --- what was asked for ------------------------------------------------------
+
+case "${1:-}" in
+  -h|--help|help)
+    awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$SELF"
+    exit 0 ;;
+esac
+
+version=classic
+glyphs=font
+case "${1:-}" in
+  "")       ;;
+  operator) version=operator ;;
+  plain)    glyphs=narrow ;;
+  *) echo "redpill: no mode called '$1'. Try: operator, plain." >&2; exit 1 ;;
+esac
+
+# MATRIX_IN_TERM stops a spawned instance from spawning another.
+if [[ $glyphs == font && -z ${MATRIX_IN_TERM:-} ]]; then
+  app="$(terminal_app || true)"
+  if terminal_resolves "$app" "matrix[- ]?code[- ]?terminal"; then
+    # The plane 16 font is in the chain, so the film's glyphs can be drawn in
+    # this very window. Nothing to do but ask for them.
+    glyphs=pua
+  elif ! terminal_resolves "$app" "matrix[- ]?code"; then
+    size="${MATRIX_FONT_SIZE:-9}"
+    hint="$(font_chain_hint "$app")"
+    [[ -t 2 && -n $hint ]] && {
+      echo "redpill: this terminal does not resolve the film's glyphs; opening one that does." >&2
+      echo "         To run in place instead, add  $hint" >&2; }
+    for t in ghostty foot alacritty kitty; do
+      command -v "$t" >/dev/null || continue
+      render=("$ROOT/bin/redpill-render" "--glyphs=font" "--version=$version")
+      case $t in
+        ghostty)   exec env MATRIX_IN_TERM=1 ghostty --font-family="Matrix-Code" --font-size="$size" \
+                     -e "${render[@]}" ;;
+        foot)      exec env MATRIX_IN_TERM=1 foot --font="Matrix-Code:size=$size" \
+                     -e "${render[@]}" ;;
+        alacritty) exec env MATRIX_IN_TERM=1 alacritty -o "font.normal.family=Matrix-Code" \
+                     -o "font.size=$size" -e "${render[@]}" ;;
+        kitty)     exec env MATRIX_IN_TERM=1 kitty -o font_family="Matrix-Code" \
+                     -o font_size="$size" "${render[@]}" ;;
+      esac
+    done
+    echo "redpill: no ghostty, foot, alacritty or kitty to open with the font." >&2
+    echo "Running here instead; try 'redpill plain', which needs no font." >&2
+  fi
+fi
+
+exec "$ROOT/bin/redpill-render" "--glyphs=$glyphs" "--version=$version"
