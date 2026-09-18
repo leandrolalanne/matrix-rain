@@ -36,7 +36,7 @@ case "${1:-}" in
     # one that has it, the way Omarchy's own screensaver does. MATRIX_IN_TERM
     # stops the spawned instance from spawning another.
     if [[ " $* " == *" --font "* && -z ${MATRIX_IN_TERM:-} ]]; then
-      size="${MATRIX_FONT_SIZE:-14}"
+      size="${MATRIX_FONT_SIZE:-9}"
       for t in ghostty foot alacritty kitty; do
         command -v "$t" >/dev/null || continue
         case $t in

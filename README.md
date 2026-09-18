@@ -89,7 +89,13 @@ one that has it — ghostty, foot, alacritty or kitty, whichever is there — th
 way Omarchy's own screensaver does. `install.sh` puts the font in
 `~/.local/share/fonts`, and `uninstall.sh` takes it back out.
 
-Set `MATRIX_FONT_SIZE` to change the size of that terminal.
+That terminal opens at **9 pt**, the same default the shader uses, so both
+renderers start at the same size. `MATRIX_FONT_SIZE` changes it.
+
+Note that at two cells per column the glyph, whose advance is 0.934 em, fills
+about half of its box. The columns end up spaced by roughly one glyph width.
+That is the cost of using the font's own codepoints, and it is why the default
+mode exists.
 
 Padding matters here: the set mixes the font's fullwidth katakana with narrow
 digits and symbols, and printing a narrow one advances a single cell, sliding
