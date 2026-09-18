@@ -78,16 +78,35 @@ los extremos sostenidos.
 
 ## Modelo de layout: terminal, no zoom
 
-Manda el **tamaño de celda**, no la cantidad de columnas. Agrandar la ventana
-hace entrar mas columnas; los glifos no cambian de tamaño. Bajar `cellHeight`
-es como bajar el cuerpo de la fuente en una terminal.
+Se configura **en puntos**, como una terminal. La celda sale de las metricas de
+la fuente y las columnas son cuantas entran.
+
+```qml
+fontSize: 9            // el unico numero de tamaño
+fontLineHeightEm: 1.000   // Matrix-Code.ttf: ascent 960 - descent(-64) + lineGap 0, sobre upm 1024
+fontAdvanceEm:    0.934   // avance dominante 956 sobre upm 1024
+```
+
+Una terminal **no escala con la ventana, escala con el DPI**:
+
+- Redimensionas la ventana -> cambia la cantidad de celdas, el glifo no se mueve.
+- La movés a otro monitor -> mismo tamaño aparente, distinta cantidad de columnas.
+
+Los px logicos de Qt ya son la unidad independiente del DPI, asi que alcanza con
+convertir puntos a px logicos a 96 DPI. Verificado:
 
 ```
-cellHeight 20, ventana 1280x720  ->  paso 25px,  36 filas x 69 columnas
-cellHeight 20, ventana  640x360  ->  paso 25px,  18 filas x 34 columnas
+ventana 1280x720  ->  paso 25px,  36 filas x 69 columnas
+ventana  640x360  ->  paso 25px,  18 filas x 34 columnas
 ```
 
 Mismo paso, distinta grilla. Eso es reflujo de terminal.
+
+| font-size | celda | grilla a 1536x864 logicos |
+|---|---|---|
+| **9 pt** | 12.0 x 11.2 px | **137 x 72** |
+| 12 pt | 16.0 x 14.9 px | 103 x 54 |
+| 15 pt | 20.0 x 18.7 px | 82 x 43 |
 
 **Es una divergencia deliberada de upstream.** Rezmason fija `numColumns: 80` y
 estira: al redimensionar hace zoom y nunca refluye. La idea de este port es que
@@ -99,10 +118,9 @@ objetivo** para todo lo que dependa de la grilla: a una ventana dada tenemos
 otra cantidad de columnas que el, por diseño. Lo que sigue siendo comparable es
 el color, el brillo y la forma de los glifos.
 
-### El ratio de celda
+### El avance de la fuente
 
-`cellAspect` es 0.934, medido de las metricas reales de `Matrix-Code.ttf`
-(unitsPerEm 1024, alto de linea 1024, avance dominante 956). O sea lo que haria
+`fontAdvanceEm` es 0.934, parseado del TTF. La celda resultante es lo que haria
 una terminal corriendo esa fuente.
 
 Ojo con dos alternativas que parecen razonables y no lo son:

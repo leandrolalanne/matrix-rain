@@ -5,7 +5,7 @@
 // no el tamaño de los glifos.
 //
 // Teclas:
-//   + / -   sube y baja el alto de celda (como el cuerpo de la fuente)
+//   + / -   sube y baja el cuerpo de la fuente, en puntos
 //   a       alterna el ratio de celda entre las tres opciones reales
 //   f       alterna 30/60 fps
 //   h       muestra u oculta este cartel
@@ -20,7 +20,7 @@ Window {
   title: "matrix rain - classic (port nativo)"
   color: "black"
 
-  // Los tres ratios que salieron de medir fuentes de verdad.
+  // Avance de la fuente en em. Los tres salen de parsear TTFs de verdad.
   readonly property var ratios: [
     { v: 0.934, n: "Matrix-Code.ttf" },
     { v: 0.909, n: "2 celdas JetBrainsMono (fullwidth)" },
@@ -32,15 +32,15 @@ Window {
     id: rain
     anchors.fill: parent
     fps: 60
-    cellAspect: win.ratios[win.ratioIdx].v
+    fontAdvanceEm: win.ratios[win.ratioIdx].v
   }
 
   Item {
     anchors.fill: parent
     focus: true
     Keys.onPressed: function(e) {
-      if (e.key === Qt.Key_Plus || e.key === Qt.Key_Equal) rain.cellHeight = Math.min(80, rain.cellHeight + 1)
-      else if (e.key === Qt.Key_Minus) rain.cellHeight = Math.max(6, rain.cellHeight - 1)
+      if (e.key === Qt.Key_Plus || e.key === Qt.Key_Equal) rain.fontSize = Math.min(60, rain.fontSize + 1)
+      else if (e.key === Qt.Key_Minus) rain.fontSize = Math.max(4, rain.fontSize - 1)
       else if (e.key === Qt.Key_A) win.ratioIdx = (win.ratioIdx + 1) % win.ratios.length
       else if (e.key === Qt.Key_F) rain.fps = rain.fps === 60 ? 30 : 60
       else if (e.key === Qt.Key_H) hud.visible = !hud.visible
@@ -58,18 +58,18 @@ Window {
       spacing: 2
       Text {
         color: "#9dffaa"; font.family: "monospace"; font.pixelSize: 12
-        text: "celda " + rain.cellHeight.toFixed(0) + " x " + (rain.cellHeight * rain.cellAspect).toFixed(1) + " px"
+        text: "font-size " + rain.fontSize.toFixed(0) + "pt   celda " + rain.cellHeight.toFixed(1) + " x " + rain.cellWidth.toFixed(1) + " px"
             + "   grilla " + Math.floor(rain.numColumns) + " x " + Math.floor(rain.numRows)
             + "   ventana " + win.width + "x" + win.height
       }
       Text {
         color: "#4fa85f"; font.family: "monospace"; font.pixelSize: 11
-        text: "ratio " + rain.cellAspect.toFixed(3) + "  " + win.ratios[win.ratioIdx].n
+        text: "avance " + rain.fontAdvanceEm.toFixed(3) + "em  " + win.ratios[win.ratioIdx].n
             + "   ·   " + rain.fps + "fps   t=" + rain.elapsed.toFixed(0) + "s"
       }
       Text {
         color: "#2f6b3a"; font.family: "monospace"; font.pixelSize: 10
-        text: "+/- celda   ·   a ratio   ·   f fps   ·   h ocultar   ·   redimensiona para ver el reflujo"
+        text: "+/- puntos   ·   a avance   ·   f fps   ·   h ocultar   ·   redimensiona para ver el reflujo"
       }
     }
   }

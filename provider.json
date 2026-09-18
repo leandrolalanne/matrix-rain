@@ -78,8 +78,9 @@
       "Los de la version 'classic' de upstream (js/config.js).",
       "Fuente de verdad: qml/MatrixRain.qml los refleja; si cambia uno, cambian los dos."
     ],
-    "cellHeight": 20,
-    "cellAspect": 0.934,
+    "fontSize": 9,
+    "fontLineHeightEm": 1.000,
+    "fontAdvanceEm": 0.934,
     "fallSpeed": 0.3,
     "raindropLength": 0.75,
     "baseContrast": 1.1,

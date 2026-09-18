@@ -3,7 +3,7 @@
 // asi que el resultado no depende de que este tapado, ni de en que workspace
 // caiga, ni de como lo tile Hyprland.
 //
-// Uso: qml6 dev/grab.qml -- <salida.png> [ancho] [alto] [segundos] [resolution] [cellHeight] [cellAspect]
+// Uso: qml6 dev/grab.qml -- <salida.png> [ancho] [alto] [segundos] [resolution] [fontSize] [fontAdvanceEm]
 import QtQuick
 import QtQuick.Window
 import "../qml"
@@ -20,8 +20,8 @@ Window {
   property int outH: 720
   property real settle: 8.0
   property real res: 1.0
-  property real cellH: 20
-  property real cellA: 0.934
+  property real fsize: 9
+  property real advEm: 0.934
 
   Component.onCompleted: {
     var args = Qt.application.arguments
@@ -32,9 +32,9 @@ Window {
     if (rest.length > 2) outH = parseInt(rest[2])
     if (rest.length > 3) settle = parseFloat(rest[3])
     if (rest.length > 4) res = parseFloat(rest[4])
-    if (rest.length > 5) cellH = parseFloat(rest[5])
-    if (rest.length > 6) cellA = parseFloat(rest[6])
-    console.log("grab: " + outW + "x" + outH + " res=" + res + " cellH=" + cellH + " aspect=" + cellA + " -> " + outPath)
+    if (rest.length > 5) fsize = parseFloat(rest[5])
+    if (rest.length > 6) advEm = parseFloat(rest[6])
+    console.log("grab: " + outW + "x" + outH + " res=" + res + " fontSize=" + fsize + "pt advance=" + advEm + "em -> " + outPath)
     grabTimer.interval = Math.max(500, settle * 1000)
     grabTimer.start()
   }
@@ -45,8 +45,8 @@ Window {
     height: win.outH
     fps: 60
     resolution: win.res
-    cellHeight: win.cellH
-    cellAspect: win.cellA
+    fontSize: win.fsize
+    fontAdvanceEm: win.advEm
   }
 
   Timer {

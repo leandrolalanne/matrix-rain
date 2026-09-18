@@ -29,19 +29,33 @@ Item {
   // (Upstream hace lo contrario: fija numColumns en 80 y estira. Al redimensionar
   // hace zoom y nunca refluye. Esta es una divergencia deliberada.)
 
-  // Alto de celda en px logicos: el paso de linea. Es la unica perilla de tamaño.
-  property real cellHeight: 20
-
-  // Ancho / alto de la celda. 0.934 medido de las metricas reales de
-  // Matrix-Code.ttf: unitsPerEm 1024, alto de linea 1024, avance dominante 956.
-  // O sea lo que haria una terminal corriendo esa fuente.
+  // --- tamaño: se configura como una terminal, en PUNTOS ---
   //
-  // Ojo: el atlas MSDF normaliza cada glifo en una celda cuadrada de 64x64, asi
-  // que con 0.934 el dibujo queda comprimido un 6.6% horizontal. Es imperceptible,
-  // pero poner 1.0 lo deja sin distorsion a costa de una grilla un pelo mas ancha.
-  // (El 0.47 de enter-the-matrix es correcto para SU atlas de katakana halfwidth,
-  // no para este: aca achataria los glifos a la mitad.)
-  property real cellAspect: 0.934
+  // Una terminal no escala con la ventana sino con el DPI: el cuerpo en puntos
+  // se convierte a pixeles segun la escala del monitor, la celda sale de las
+  // metricas de la fuente, y las columnas son cuantas entran. Mover la ventana
+  // a otro monitor mantiene el tamaño aparente y cambia la cantidad de columnas.
+  //
+  // Los px logicos de Qt ya son la unidad independiente del DPI, asi que
+  // alcanza con convertir puntos a px logicos a 96 DPI, igual que el resto del
+  // escritorio.
+  property real fontSize: 9
+  readonly property real pxPerPoint: 96 / 72
+
+  // Metricas reales de Matrix-Code.ttf, parseadas del TTF (unitsPerEm 1024):
+  //   alto de linea    ascent 960 - descent(-64) + lineGap 0 = 1024  -> 1.000 em
+  //   avance dominante 956                                          -> 0.934 em
+  //
+  // De aca sale TODO el tamaño. Cambiar de fuente es cambiar estos dos numeros.
+  // (JetBrainsMono, para comparar: 1.320 em de linea y 0.600 de avance. Su celda
+  // da ratio 0.455, correcto para glifos halfwidth como los katakana de ttfx,
+  // no para estos que son cuadrados.)
+  property real fontLineHeightEm: 1.000
+  property real fontAdvanceEm: 0.934
+
+  readonly property real cellHeight: fontSize * pxPerPoint * fontLineHeightEm
+  readonly property real cellWidth:  fontSize * pxPerPoint * fontAdvanceEm
+  readonly property real cellAspect: fontAdvanceEm / fontLineHeightEm
 
   readonly property real numColumns: width  > 0 ? Math.max(1, width  / (cellHeight * cellAspect)) : 1
   readonly property real numRows:    height > 0 ? Math.max(1, height / cellHeight) : 1
