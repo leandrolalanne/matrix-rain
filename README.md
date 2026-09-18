@@ -76,6 +76,33 @@ cinco stops contra la conversion propia: coinciden exacto. No hay correccion
 de gamma en ningun lado, y la rampa interpola **lineal** (no smoothstep) con
 los extremos sostenidos.
 
+## Que es cada cosa
+
+`omarchy plugin add` clona el repo **entero** en la maquina de cada usuario, asi
+que todo lo que esta aca se instala. Nada sobra, pero conviene saber que es que:
+
+| | | |
+|---|---|---|
+| `qml/` | **producto** | `MatrixRain.qml` y `BloomLevel.qml`: los componentes |
+| `shaders/*.frag.qsb` | **producto** | compilados, son los que se cargan en runtime |
+| `assets/matrixcode_msdf.png` | **producto** | el atlas MSDF, de upstream sin tocar |
+| `assets/matrix-rain.live.webp` | **producto** | miniatura + marcador + fallback estatico |
+| `provider.json` | **producto** | lo que leen los consumidores |
+| `LICENSE`, `LICENSE.rezmason` | **producto** | MIT propio y el de upstream |
+| `shaders/*.frag` | fuente | el GLSL del que salen los `.qsb` |
+| `tools/build-shaders.sh` | fuente | los compila; solo hace falta si tocas un `.frag` |
+| `tools/make-marker.sh` | fuente | regenera el marcador offscreen |
+| `dev/` | desarrollo | `main.qml` es el preview, `grab.qml` captura sin pantalla |
+| `tools/preview.sh` | desarrollo | abre el preview, y el original al lado |
+| `tools/COMPARACION.md` | desarrollo | como medir contra el original sin medir mal |
+
+Los `.qsb` estan versionados a proposito aunque sean artefactos de compilacion:
+el usuario que instala el plugin no va a correr `qsb`.
+
+El marcador es WebP y no PNG porque sobre ruido verde da 76% menos peso siendo
+visualmente indistinguible, y era el 94% del repo.
+
+
 ## Modelo de layout: terminal, no zoom
 
 Se configura **en puntos**, como una terminal. La celda sale de las metricas de
@@ -234,7 +261,7 @@ el mismo shader corre en todos, y el que no soporte multipaso usa la etapa
 
 ### Como se selecciona como fondo en Omarchy
 
-`assets/matrix-rain.live.png` hace tres cosas a la vez:
+`assets/matrix-rain.live.webp` hace tres cosas a la vez:
 
 1. es la **miniatura** en el switcher de fondos,
 2. seleccionarlo es lo que **enciende** la lluvia en vivo — el consumidor mira

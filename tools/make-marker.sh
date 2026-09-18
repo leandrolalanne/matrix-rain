@@ -17,7 +17,7 @@
 
 set -uo pipefail
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT="$HERE/assets/matrix-rain.live.png"
+OUT="$HERE/assets/matrix-rain.live.webp"
 W="${1:-1920}"; H="${2:-1080}"; FS="${3:-9}"
 
 command -v qml6 >/dev/null || { echo "hace falta qml6 (paquete qt6-declarative)" >&2; exit 1; }
@@ -51,6 +51,9 @@ src, dst, w, h = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
 im = Image.open(src).convert("RGB")
 if im.size != (w, h):
     im = im.resize((w, h), Image.LANCZOS)
-im.save(dst, optimize=True)
+# WebP q92: 76% mas liviano que PNG y visualmente indistinguible sobre
+# ruido verde. Importa porque `omarchy plugin add` clona el repo entero
+# en la maquina de cada usuario.
+im.save(dst, format="WEBP", quality=92)
 print(f"  marcador: {dst}  {im.size[0]}x{im.size[1]}")
 PY

@@ -69,7 +69,7 @@
       "que usa ese otro y encenderia su lluvia junto con la nuestra."
     ],
     "marker": ".live.",
-    "image": "assets/matrix-rain.live.png",
+    "image": "assets/matrix-rain.live.webp",
     "generator": "tools/make-marker.sh"
   },
 
