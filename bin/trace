@@ -1,0 +1,16 @@
+#!/bin/bash
+# The trace program from the film's opening, in the terminal you are in.
+#
+# Unlike `redpill` this needs no font work: the trace is digits, and every font
+# has those. So the launcher only finds the renderer and hands over -- there is
+# no detection to do and nothing to fall back to.
+
+set -uo pipefail
+
+SRC="$(cd -- "$(dirname -- "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+RENDER="$SRC/trace/trace-render"
+
+[[ -x $RENDER ]] || { echo "trace: cannot find $RENDER" >&2; exit 1; }
+command -v python3 >/dev/null || { echo "trace: needs python3" >&2; exit 1; }
+
+exec "$RENDER" "$@"

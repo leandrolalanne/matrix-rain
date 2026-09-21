@@ -11,7 +11,7 @@
 set -uo pipefail
 
 NAME="matrix-rain"
-CMDS=(matrix redpill)
+CMDS=(matrix redpill trace)
 # Linked as `enterthematrix` before the commands were split in two. Left behind
 # it would dangle, so the install clears it.
 OLD_CMDS=(enterthematrix)

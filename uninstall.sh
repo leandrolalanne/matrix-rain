@@ -4,7 +4,7 @@ set -uo pipefail
 NAME="matrix-rain"
 # enterthematrix is the name both commands had before the split; an install from
 # then would have left it behind.
-CMDS=(matrix redpill enterthematrix)
+CMDS=(matrix redpill trace enterthematrix)
 SHARE="${XDG_DATA_HOME:-$HOME/.local/share}/$NAME"
 BIN="$HOME/.local/bin"
 

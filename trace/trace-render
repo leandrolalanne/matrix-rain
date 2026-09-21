@@ -1,0 +1,262 @@
+#!/usr/bin/env python3
+"""The trace program from the opening of The Matrix, in a terminal.
+
+Not the rain. This is the other thing the film opens on: a field of digits in
+fixed cells, cycling in place until the trace closes and they lock onto an
+address. The rain falls and its glyphs are katakana; this does not move at all
+and its glyphs are the ten digits.
+
+Nobody has reconstructed this one. Rezmason's project -- the reference every
+number in the rain comes from -- covers the rain versions only, and the
+published writing about "the Matrix code" is all about the katakana. So the
+numbers below were measured off a frame rather than taken from a source:
+
+    5 blocks of 9 columns, separated by a gap of about 1.7 column widths
+    cell 38 x 40 px, so very nearly square
+    ~20 rows visible
+    luminance p10 35, median 61, p90 119, max 196, with ~9% of cells bright
+
+One measurement is worth stating carefully, because it disagrees with the rain.
+Over 389 digits the trace sits at **hue 159-161**, a green with blue in it, at
+38% saturation. The rain is at hue 108. That is 50 degrees apart -- twice the
+error of the `#00ff41` everyone reaches for. It comes from a single frame of a
+single transfer, so the grade of that copy could be moving it; `--green` renders
+in the rain's hue instead, for when this has to sit next to the rain.
+
+The film's own colourist notes are not public, so the VFX team's description of
+the title shader is the only process detail there is: it "would hold some in
+place sometimes making it look glitchy or overlap two characters on the same
+cell with different levels of brightness". Holding and the brightness spread are
+reproduced here. Overlap is not: a terminal cell takes one glyph.
+"""
+
+import math
+import os
+import random
+import select
+import signal
+import sys
+import termios
+import time
+import tty
+
+# --- measured off the frame -------------------------------------------------
+
+COLS_PER_BLOCK = 9
+BLOCK_GAP = 3            # terminal cells; 1.7 column widths at 2 cells a column
+CELL_W = 2               # digit plus a space, which is what makes the cell square
+
+# The three tiers the luminance histogram falls into, in the measured hue.
+TRACE = {
+    "dim":    (26, 58, 48),
+    "mid":    (41, 91, 75),
+    "bright": (116, 192, 165),
+    "peak":   (196, 255, 232),
+}
+# The rain's own hue, for when the two have to share a screen.
+GREEN = {
+    "dim":    (24, 61, 15),
+    "mid":    (61, 153, 38),
+    "bright": (137, 247, 110),
+    "peak":   (217, 255, 255),
+}
+
+BRIGHT_SHARE = 0.09      # the measured 9%
+
+
+class Trace:
+    """A field of cells that cycle in place, then lock, then hold an address."""
+
+    def __init__(self, cols, rows, target, palette=TRACE, seed=None):
+        self.target = "".join(ch for ch in target if ch.isdigit()) or "0"
+        self.palette = palette
+        self.rng = random.Random(seed)
+        self.resize(cols, rows)
+
+    # -- geometry ------------------------------------------------------------
+
+    def resize(self, cols, rows):
+        self.term_cols, self.rows = cols, max(1, rows)
+        block = COLS_PER_BLOCK * CELL_W
+        # Whole blocks only: a half block at the right edge reads as a bug.
+        self.blocks = max(1, (cols + BLOCK_GAP) // (block + BLOCK_GAP))
+        self.cols = self.blocks * COLS_PER_BLOCK
+        used = self.blocks * block + (self.blocks - 1) * BLOCK_GAP
+        self.margin = max(0, (cols - used) // 2)
+        self._seed_field()
+
+    def _seed_field(self):
+        """Per-cell constants: when it locks, what it lands on, how bright."""
+        r = self.rng
+        self.lock_at, self.final, self.tier = {}, {}, {}
+        for y in range(self.rows):
+            for x in range(self.cols):
+                # Locking sweeps left to right with enough jitter that the edge
+                # is ragged rather than a wipe.
+                across = x / max(1, self.cols - 1)
+                self.lock_at[(x, y)] = across * 0.75 + r.random() * 0.35
+                self.final[(x, y)] = r.randrange(10)
+                self.tier[(x, y)] = "bright" if r.random() < BRIGHT_SHARE else (
+                    "mid" if r.random() < 0.62 else "dim")
+
+    def screen_x(self, x):
+        b, c = divmod(x, COLS_PER_BLOCK)
+        return self.margin + b * (COLS_PER_BLOCK * CELL_W + BLOCK_GAP) + c * CELL_W
+
+    # -- the address, written across the middle ------------------------------
+
+    def target_cells(self):
+        """Where the resolved address sits: centred, one digit per cell."""
+        n = len(self.target)
+        if n > self.cols:
+            return {}
+        y = self.rows // 2
+        x0 = (self.cols - n) // 2
+        return {(x0 + i, y): int(ch) for i, ch in enumerate(self.target)}
+
+    # -- what a cell shows at time t -----------------------------------------
+
+    def cell(self, x, y, t, phase):
+        """Returns (digit, rgb). `phase` is 0..1 across cycle -> locked."""
+        locked = phase >= self.lock_at[(x, y)]
+        addr = self.addr.get((x, y))
+
+        if locked:
+            d = addr if addr is not None else self.final[(x, y)]
+        else:
+            # Held in place, the way the title shader did: a cell keeps its
+            # digit for a few frames instead of changing every one.
+            hold = 0.06 + 0.10 * ((x * 7 + y * 13) % 5) / 4.0
+            d = self.rng_at(x, y, int(t / hold))
+
+        if addr is not None and locked:
+            rgb = self.palette["peak"]
+        elif locked:
+            # Everything that is not the address falls back once the trace has
+            # closed: the answer is the only thing that stays lit.
+            rgb = self.palette["dim"] if self.addr else self.palette[self.tier[(x, y)]]
+        else:
+            rgb = self.palette[self.tier[(x, y)]]
+        return d, rgb
+
+    @staticmethod
+    def rng_at(x, y, step):
+        """Deterministic per-cell digit, so a repaint never flickers."""
+        h = (x * 73856093) ^ (y * 19349663) ^ (step * 83492791)
+        h = (h ^ (h >> 13)) * 1274126177 & 0xFFFFFFFF
+        return (h >> 7) % 10
+
+
+def run(tr, cycle=4.0, lock=3.0, hold=3.0, fps=20):
+    out = sys.stdout.write
+    frame = 1.0 / fps
+    t0 = time.monotonic()
+    while True:
+        t = time.monotonic() - t0
+        total = cycle + lock + hold
+        loop = t % total
+        if loop < cycle:
+            phase, tr.addr = 0.0, {}
+        elif loop < cycle + lock:
+            phase = (loop - cycle) / lock
+            tr.addr = tr.target_cells() if phase > 0.55 else {}
+        else:
+            phase, tr.addr = 1.0, tr.target_cells()
+
+        buf, prev = ["\x1b[H\x1b[2J"], None
+        for y in range(tr.rows):
+            line = [" "] * tr.term_cols
+            colours = [None] * tr.term_cols
+            for x in range(tr.cols):
+                sx = tr.screen_x(x)
+                if sx >= tr.term_cols:
+                    continue
+                d, rgb = tr.cell(x, y, t, phase)
+                line[sx] = str(d)
+                colours[sx] = rgb
+            for i, ch in enumerate(line):
+                if colours[i] is not None and colours[i] != prev:
+                    buf.append("\x1b[38;2;%d;%d;%dm" % colours[i])
+                    prev = colours[i]
+                buf.append(ch)
+            if y < tr.rows - 1:
+                buf.append("\r\n")
+        out("".join(buf))
+        sys.stdout.flush()
+        dt = frame - (time.monotonic() - t0 - t)
+        if select.select([sys.stdin], [], [], max(0.0, dt))[0]:
+            return
+
+
+USAGE = """the trace program, in the terminal
+
+  trace [--target N] [--green] [--once] [--fps N]
+
+  --target N   the address it resolves to (default: this machine's)
+  --green      render in the rain's hue instead of the trace's own
+  --once       run one pass and stop, rather than looping
+  --fps N      default 20
+
+Any key quits."""
+
+
+def local_address():
+    """The address the trace lands on, the way the banner picks it."""
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("192.0.2.1", 1))       # TEST-NET-1: routed nowhere, sends nothing
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except OSError:
+        return "312 555 0690"             # the number from the film
+
+
+def main():
+    args = sys.argv[1:]
+    if "-h" in args or "--help" in args:
+        print(USAGE)
+        return
+    target, palette, once, fps = None, TRACE, False, 20
+    for i, a in enumerate(args):
+        if a == "--green":
+            palette = GREEN
+        elif a == "--once":
+            once = True
+        elif a.startswith("--target="):
+            target = a.split("=", 1)[1]
+        elif a == "--target" and i + 1 < len(args):
+            target = args[i + 1]
+        elif a.startswith("--fps="):
+            fps = int(a.split("=", 1)[1])
+    if target is None:
+        target = local_address()
+    if not sys.stdout.isatty():
+        sys.exit("trace: needs a terminal")
+
+    fd = sys.stdin.fileno()
+    saved = termios.tcgetattr(fd)
+    cols, rows = os.get_terminal_size()
+    tr = Trace(cols, rows, target, palette=palette)
+    tr.addr = {}
+
+    def on_resize(*_):
+        c, r = os.get_terminal_size()
+        tr.resize(c, r)
+    signal.signal(signal.SIGWINCH, on_resize)
+
+    try:
+        tty.setraw(fd)
+        sys.stdout.write("\x1b[?1049h\x1b[?25l\x1b[2J")
+        run(tr, fps=fps, hold=1e9 if once else 3.0)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        sys.stdout.write("\x1b[0m\x1b[?25h\x1b[?1049l")
+        sys.stdout.flush()
+        termios.tcsetattr(fd, termios.TCSADRAIN, saved)
+
+
+if __name__ == "__main__":
+    main()
