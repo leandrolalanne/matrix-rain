@@ -69,7 +69,17 @@ terminal_resolves() {
   esac
   # kitty separates key from value with a space, the others with '='. Requiring
   # one of them is also what keeps `font` from matching `font-size`.
-  terminal_config "$file" | grep -Eqi "^[[:space:]]*($keys)([[:space:]]|=)+.*$2"
+  #
+  # The config is read into a variable rather than piped, and that is not a
+  # style choice. `grep -q` exits the moment it matches, which closes the pipe
+  # while the writer upstream is still going; the writer takes SIGPIPE and dies
+  # with 141, and `set -o pipefail` at the top of this file makes 141 the status
+  # of the whole pipeline. So the check reported "not found" precisely WHEN IT
+  # HAD FOUND IT -- and only when something followed the match in the stream,
+  # which is why it worked for months and then did not.
+  local text
+  text=$(terminal_config "$file")
+  grep -Eqi "^[[:space:]]*($keys)([[:space:]]|=)+.*$2" <<<"$text"
 }
 
 # What the user would add to run it here instead. One line, in their syntax.
