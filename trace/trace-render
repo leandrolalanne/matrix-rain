@@ -163,7 +163,10 @@ def run(tr, cycle=4.0, lock=3.0, hold=3.0, fps=20):
         else:
             phase, tr.addr = 1.0, tr.target_cells()
 
-        buf, prev = ["\x1b[H\x1b[2J"], None
+        # Home, and NOT a clear. Erasing the screen every frame leaves a gap
+        # between the erase and the repaint that reads as a flicker; every cell
+        # is written on every frame anyway, so there is nothing stale to erase.
+        buf, prev = ["\x1b[H"], None
         for y in range(tr.rows):
             line = [" "] * tr.term_cols
             colours = [None] * tr.term_cols
@@ -244,6 +247,9 @@ def main():
     def on_resize(*_):
         c, r = os.get_terminal_size()
         tr.resize(c, r)
+        # The one place a clear is right: the grid changes width and whatever
+        # the old one left outside the new one would never be painted over.
+        sys.stdout.write("\x1b[2J")
     signal.signal(signal.SIGWINCH, on_resize)
 
     try:
