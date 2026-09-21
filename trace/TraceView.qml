@@ -13,6 +13,10 @@
 // a second by design, so the scene graph has almost nothing to do between
 // ticks. It is also readable, which a shader is not.
 
+// Bound, so the delegate below reaches `root` explicitly instead of relying on
+// the implicit lookup Qt now warns about.
+pragma ComponentBehavior: Bound
+
 import QtQuick
 
 Item {
@@ -133,6 +137,9 @@ Item {
     model: root.cols * root.rows
 
     Text {
+      // Declared rather than implicitly injected, which Qt 6 warns about.
+      required property int index
+
       readonly property int cx: index % root.cols
       readonly property int cy: Math.floor(index / root.cols)
       readonly property int block: Math.floor(cx / root.colsPerBlock)
