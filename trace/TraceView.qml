@@ -41,10 +41,14 @@ Item {
   readonly property real cellAspect: 38 / 40      // very nearly square
   readonly property real brightShare: 0.09
 
-  readonly property color dim: "#1a3a30"
-  readonly property color mid: "#295b4b"
-  readonly property color bright: "#74c0a5"
-  readonly property color peak: "#c4ffe8"
+  // The film's own colour, measured: hue 159-161 at 38% saturation, fifty
+  // degrees off the rain's 108. Settable, because a theme that is built around
+  // the rain's hue wants its own green here rather than this one -- the
+  // structure is in the three luminance tiers, not in the hue.
+  property color dim: "#1a3a30"
+  property color mid: "#295b4b"
+  property color bright: "#74c0a5"
+  property color peak: "#c4ffe8"
 
   // Five blocks across, which is what the frame has, so the field reads the
   // same on any screen. The cell follows the WIDTH -- fix the height instead
