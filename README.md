@@ -7,6 +7,7 @@ typing in.
 ```bash
 matrix      # the rain on the GPU, with bloom and the intro
 redpill     # the same rain, in this terminal, with the film's own glyphs
+trace       # the trace program from the opening, in this terminal
 ```
 
 ![Five windows of the rain tiled across a desktop](docs/media/desktop.jpg)
@@ -125,6 +126,40 @@ It is **the same rain**, not a lookalike: the brightness function is ported
 line for line from the shader, so a column falls here exactly as it falls there.
 What changes is the drawing — character cells instead of glyphs, and no bloom,
 because a terminal has none to give.
+
+## The trace program
+
+The other thing the film opens on. Not the rain: a field of digits in fixed
+cells, cycling in place until the trace closes and they lock onto an address.
+The rain falls, in katakana, and never stops; this does not move at all, and it
+ends.
+
+```bash
+trace                         # resolves to this machine's address
+trace --target 312-555-0690   # the number from the film
+trace --green                 # the rain's hue instead of the trace's own
+```
+
+![The trace program resolving onto an address](docs/media/trace.jpg)
+
+This one had to be measured rather than ported. Every number in the rain comes
+from [Rezmason/matrix](https://github.com/Rezmason/matrix), and that project does
+not cover this sequence — nor does anything else published, since the writing
+about "the Matrix code" is all about the katakana. So the layout came off a
+frame: five blocks of nine columns, a gap of about 1.7 column widths, cells very
+nearly square, and about 9% of the field bright.
+
+One finding is worth the caveat that goes with it. Measured across 389 digits,
+the trace sits at **hue 159–161** — a green with blue in it — where the rain
+sits at **108**. Fifty degrees, twice the error in the `#00ff41` the internet
+reaches for. It is one frame of one transfer and a grade can move a hue, so
+`--green` renders in the rain's hue for when the two share a screen.
+
+`trace/TraceView.qml` is the same field as a QML item, for putting behind
+something else — a lock screen, a login. Its four colours are properties, so a
+desktop built around the rain's hue can bring its own.
+
+Full method and every measurement: [`trace/README.md`](trace/README.md).
 
 ### Getting the film's glyphs in your own window
 
